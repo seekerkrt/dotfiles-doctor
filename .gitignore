@@ -1,0 +1,22 @@
+# Build output
+build/
+dist/
+
+# Compiled artifacts
+*.o
+*.obj
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+
+# Generated tooling data
+compile_commands.json
+
+# Editor / temporary files
+*.swp
+*.swo
+*~
+.DS_Store
