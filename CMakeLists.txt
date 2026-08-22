@@ -22,7 +22,9 @@ include(CTest)
 
 if(BUILD_TESTING)
     add_test(
-        NAME dotdoctor_smoke
-        COMMAND dotdoctor
+        NAME dotdoctor_integration
+        COMMAND sh
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_dotdoctor.sh
+            $<TARGET_FILE:dotdoctor>
     )
 endif()
