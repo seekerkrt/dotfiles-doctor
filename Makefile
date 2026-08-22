@@ -14,8 +14,7 @@ test: build
 	ctest --test-dir $(BUILD_DIR) --output-on-failure
 
 run: build
-	./$(BUILD_DIR)/dotdoctor
+	./$(BUILD_DIR)/dotdoc
 
 clean:
 	cmake --build $(BUILD_DIR) --target clean
-

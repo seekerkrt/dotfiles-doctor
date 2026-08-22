@@ -3,7 +3,7 @@
 日本語: [README.ja.md](README.ja.md)
 
 Dotfiles Doctor is a small diagnostic tool for dotfiles and GNU Stow managed
-environments. The CLI command is `dotdoctor`.
+environments. The CLI command is `dotdoc`.
 
 ## Overview
 

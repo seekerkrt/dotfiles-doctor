@@ -3,7 +3,7 @@
 set -u
 
 if [ "$#" -ne 1 ]; then
-    echo "usage: $0 <dotdoctor-binary>" >&2
+    echo "usage: $0 <dotdoc-binary>" >&2
     exit 2
 fi
 
