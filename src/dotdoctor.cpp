@@ -4,143 +4,134 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
-#include <string>
 #include <system_error>
 #include <vector>
 
 namespace fs = std::filesystem;
+
+constexpr int kExitClean = 0;
+constexpr int kExitFindings = 1;
+constexpr int kExitError = 2;
 
 struct Finding {
     fs::path path;
     fs::path raw_target;
 };
 
-int main(int argc, char* argv[]) {
-    std::vector<std::string> args(argv, argv + argc);
-    // args[0] = 実行ファイル名
-    // args[1]... = 起動時引数
+int report_filesystem_error(const char* action,
+                            const fs::path& path,
+                            const std::error_code& ec) {
+    std::cerr << "Error: " << action << ": " << path << ": " << ec.message() << '\n';
+    return kExitError;
+}
 
-    // 引数の数をチェックし、dotfiles_path を決定する
-    fs::path dotfiles_path;
-    if(args.size() == 1) {
-        // default path("$HOME/dotfiles")
-        // ~ は std::filesystem が展開してくれるものではない。
-        // そのため、std::getenv("HOME")を使用する。
-        const char* home = std::getenv("HOME");
-        if(home == nullptr || *home == '\0') {
-            std::cerr << "Error: HOME environment variable is not set.\n";
-            return 2;
-        }
-
-        dotfiles_path = fs::path(home) / "dotfiles";
-    } else if(args.size() == 2) {
-        dotfiles_path = args[1];
-    } else {
-        std::cerr << "Usage: " << args[0] << " [path]\n";
-        return 2;
-    }
-
-    // scan root の status を取得
+int scan_broken_symlinks(const fs::path& scan_root, std::vector<Finding>& findings) {
     std::error_code ec;
-    auto status = fs::status(dotfiles_path, ec);
-    if(ec) {
-        std::cerr << "ec.value(): " << ec.value() << '\n';
-        std::cerr << "ec.message(): " << ec.message() << '\n';
-        return 2;
-    }
-
-    // PATHとdirectoryのチェック
-    if(!fs::exists(status)) {
-        std::cerr << "Error: Path does not exist: " << dotfiles_path << '\n';
-        return 2;
-    }
-
-    if(!fs::is_directory(status)) {
-        std::cerr << "Error: Path is not a directory: " << dotfiles_path << '\n';
-        return 2;
-    }
-
-    // scan root 以下を再帰走査する
-    fs::recursive_directory_iterator it(dotfiles_path, ec);
+    fs::recursive_directory_iterator it(scan_root, ec);
     fs::recursive_directory_iterator end;
 
     if(ec) {
-        std::cerr << "ec.value(): " << ec.value() << '\n';
-        std::cerr << "ec.message(): " << ec.message() << '\n';
-        return 2;
+        return report_filesystem_error("failed to open scan root", scan_root, ec);
     }
-    std::vector<Finding> findings;
-    while(it != end) {
-        // entry 自身の状態を取得する。
-        // status() ではなく symlink_status() なので、
-        // symbolic link の target を follow しない。リンク自身の状態を取得する。
-        auto entry_status = it->symlink_status(ec);
 
+    while(it != end) {
+        const auto entry_status = it->symlink_status(ec);
         if(ec) {
-            std::cerr << "ec.value(): " << ec.value() << '\n';
-            std::cerr << "ec.message(): " << ec.message() << '\n';
-            return 2;
+            return report_filesystem_error("failed to inspect entry", it->path(), ec);
         }
 
-        // symlink の場合だけtargetを確認する。
-        // regular file / directory は正常なので、そのまま無視する。
         if(fs::is_symlink(entry_status)) {
-            // 現在entryのtargetをfollowするstatusを取得。リンク先を確認する。
-            auto target_status = it->status(ec);
-            // target statusのtypeを見る
+            const auto target_status = it->status(ec);
+
+            // A broken symlink can produce both file_type::not_found and ENOENT.
+            // Classify not_found before treating ec as a scan error.
             if(target_status.type() == fs::file_type::not_found) {
-                // broken symlink の場合
                 ec.clear();
-                // read_symlink() でraw targetを取る
-                auto raw_target = fs::read_symlink(it->path(), ec);
+
+                const auto raw_target = fs::read_symlink(it->path(), ec);
                 if(ec) {
-                    // read_symlink 自体に失敗
-                    std::cerr << "file system error: " << '\n';
-                    std::cerr << "ec.value(): " << ec.value() << '\n';
-                    std::cerr << "ec.message(): " << ec.message() << '\n';
-                    return 2;
+                    return report_filesystem_error("failed to read symlink", it->path(), ec);
                 }
 
                 findings.push_back({it->path(), raw_target});
             } else if(ec) {
-                std::cerr << "file system error: " << '\n';
-                std::cerr << "ec.value(): " << ec.value() << '\n';
-                std::cerr << "ec.message(): " << ec.message() << '\n';
-                return 2;
+                return report_filesystem_error(
+                    "failed to inspect symlink target", it->path(), ec);
             }
         }
 
-
-        // 次のentryへ進む
+        // recursive_directory_iterator does not follow directory symlinks
+        // unless follow_directory_symlink is explicitly requested.
         it.increment(ec);
-
         if(ec) {
-            std::cerr << "ec.value(): " << ec.value() << '\n';
-            std::cerr << "ec.message(): " << ec.message() << '\n';
-            return 2;
+            return report_filesystem_error("failed while traversing", scan_root, ec);
         }
     }
 
-    // broken symlink の一覧を表示する
-    if(!findings.empty()) {
-        std::sort(findings.begin(), findings.end(), [](const Finding& a, const Finding& b) {
-            return a.path < b.path;
-        });
+    return kExitClean;
+}
 
-        for(const auto& finding : findings) {
-            std::cout << "BROKEN: "
-                      << finding.path.lexically_relative(dotfiles_path)
-                      << " -> "
-                      << finding.raw_target
-                      << '\n';
-        }
-
-        // 1件でもbroken symlinkが見つかったら1を返す
-        return 1;
+int main(int argc, char* argv[]) {
+    if(argc > 2) {
+        std::cerr << "Usage: " << argv[0] << " [path]\n";
+        return kExitError;
     }
 
-    std::cout << "OK: no broken symlinks found.\n";
+    fs::path scan_root;
 
-    // Broken symlinkが見つからなかった場合は正常終了
-    return 0;
+    if(argc == 2) {
+        scan_root = argv[1];
+    } else {
+        const char* home = std::getenv("HOME");
+        if(home == nullptr || *home == '\0') {
+            std::cerr << "Error: HOME environment variable is not set.\n";
+            return kExitError;
+        }
+
+        // std::filesystem does not expand '~'.
+        scan_root = fs::path(home) / "dotfiles";
+    }
+
+    std::error_code ec;
+    const auto root_status = fs::status(scan_root, ec);
+
+    if(root_status.type() == fs::file_type::not_found) {
+        std::cerr << "Error: Path does not exist: " << scan_root << '\n';
+        return kExitError;
+    }
+
+    if(ec) {
+        return report_filesystem_error("failed to inspect scan root", scan_root, ec);
+    }
+
+    if(!fs::is_directory(root_status)) {
+        std::cerr << "Error: Path is not a directory: " << scan_root << '\n';
+        return kExitError;
+    }
+
+    std::vector<Finding> findings;
+
+    const int scan_result = scan_broken_symlinks(scan_root, findings);
+    if(scan_result != kExitClean) {
+        return scan_result;
+    }
+
+    if(findings.empty()) {
+        std::cout << "OK: no broken symlinks found.\n";
+        return kExitClean;
+    }
+
+    std::sort(findings.begin(), findings.end(), [](const Finding& lhs, const Finding& rhs) {
+        return lhs.path < rhs.path;
+    });
+
+    for(const auto& finding : findings) {
+        std::cout << "BROKEN: "
+                  << finding.path.lexically_relative(scan_root)
+                  << " -> "
+                  << finding.raw_target
+                  << '\n';
+    }
+
+    return kExitFindings;
 }
