@@ -2,57 +2,176 @@
 
 日本語: [README.ja.md](README.ja.md)
 
-Dotfiles Doctor is a small diagnostic tool for dotfiles and GNU Stow managed
-environments. The CLI command is `dotdoc`.
+Dotfiles Doctor is a small, read-only diagnostic CLI for dotfiles trees.
+The command is `dotdoc`.
 
 ## Overview
 
-Dotfiles Doctor is a C++ project for inspecting a user's dotfiles. GNU Stow
-managed environments are a primary target, but this is not a GNU Stow-only
-tool.
+`dotdoc` scans a dotfiles tree, reports the problems it finds, and does not
+modify the scanned files.
 
-The initial direction is a small, diagnostic-oriented command. It is intended
-to help people understand the state of their files, not to become another
-full dotfiles manager.
-
-Diagnostic features are not implemented yet. There is currently no usable
-CLI.
+GNU Stow managed environments are a primary target, but Dotfiles Doctor is
+not a GNU Stow-only tool. It is also not a dotfiles manager or deployer: it
+tells you what looks wrong and leaves the fix to you.
 
 ## Status
 
-Early development.
+Early development, working toward the first release. `dotdoc --version`
+currently reports `0.1.0`, and there is no tagged release yet.
 
-There is no usable release. Source code, tests, and a build system are not in
-place yet.
+Available today:
 
-## Project principles
+- Broken symbolic link detection
+- `-h` / `--help`
+- `--version`
 
-- Small and focused
-- Diagnostic-oriented
-- Read-only by default
-- Understandable and maintainable
-- Avoid becoming another full dotfiles manager
+Further diagnostics are planned; the roadmap lives in the GitHub issues
+linked below.
 
-## Development
+## Usage
 
-Dotfiles Doctor uses C++20.
+```text
+dotdoc [OPTIONS] [PATH]
+```
 
-See [docs/CODING_CONVENTIONS.md](docs/CODING_CONVENTIONS.md) for
-project-specific coding conventions.
+- `dotdoc` — scan `$HOME/dotfiles`
+- `dotdoc PATH` — scan only the given directory
+- `dotdoc -h`, `dotdoc --help` — show usage and exit
+- `dotdoc --version` — show version information and exit
 
-The build system is not decided yet. This README does not list build
-commands.
+`--help` and `--version` are handled before `$HOME` and the scan root are
+inspected, so they work even when neither is usable.
 
-## Repository structure
+## Output
 
-Current top-level layout:
+Findings are written to standard output, one line per broken symbolic link,
+sorted by path. Each line shows the path relative to the scan root followed
+by the raw symbolic link target.
 
-- `LICENSE` — GNU GPL v3 or later
-- `README.md` / `README.ja.md` — English and Japanese overviews
-- `docs/` — project documentation, currently coding conventions
-- `.editorconfig` — editor defaults
-- `.clang-format` — clang-format settings
-- `.markdownlint-cli2.jsonc` — Markdown lint settings
+```console
+$ dotdoc ~/dotfiles
+BROKEN: "nvim/init.lua" -> "../missing/init.lua"
+BROKEN: "zshrc" -> "/home/example/does-not-exist/zshrc"
+```
+
+When nothing is found:
+
+```console
+$ dotdoc ~/dotfiles
+OK: no broken symlinks found.
+```
+
+Invocation and filesystem errors are written to standard error.
+
+## Exit status
+
+- `0` — the scan completed and found nothing
+- `1` — the scan completed and reported findings
+- `2` — an invocation, filesystem, or scan error occurred
+
+Note that `1` means **diagnostic findings, not program failure**. Only `2`
+means `dotdoc` itself could not do its job.
+
+## Behavior and safety
+
+- The scan is recursive.
+- Symbolic links are inspected as symbolic links. A directory symbolic link
+  is checked itself, but the tree behind it is not traversed.
+- Dotfiles Doctor is read-only. It never creates, moves, edits, or deletes
+  your files, and it performs no automatic repair.
+
+## Build
+
+Requirements: a C++20 compiler and CMake 3.20 or newer. Only the C++
+standard library is used.
+
+```sh
+make
+```
+
+`make` is a thin wrapper around CMake. The equivalent explicit commands are:
+
+```sh
+cmake -S . -B build
+cmake --build build
+```
+
+The binary is written to `build/dotdoc`.
+
+## Test
+
+```sh
+make test
+```
+
+This runs the integration tests (`tests/test_dotdoc.sh`) through CTest. The
+tests build their fixtures in a temporary directory and never touch your
+real `$HOME` or dotfiles.
+
+## Install from source
+
+Installation uses the CMake install rules. For a user-local install:
+
+```sh
+cmake -S . -B build
+cmake --build build
+cmake --install build --prefix "$HOME/.local"
+```
+
+That installs:
+
+- `$HOME/.local/bin/dotdoc`
+- `$HOME/.local/share/man/man1/dotdoc.1`
+
+Make sure `$HOME/.local/bin` is on your `PATH`.
+
+For a typical system-wide source install, use `/usr/local`:
+
+```sh
+sudo cmake --install build --prefix /usr/local
+```
+
+On Arch Linux, prefer the packaged install described below.
+
+### Removing a source install
+
+There is no `uninstall` target. To remove a source install, delete the
+installed files by hand under the prefix you used:
+
+```sh
+rm -f "$HOME/.local/bin/dotdoc"
+rm -f "$HOME/.local/share/man/man1/dotdoc.1"
+```
+
+## Arch Linux
+
+A `PKGBUILD` is included in the repository root. On Arch Linux, install
+Dotfiles Doctor as a package rather than from source, so that pacman owns
+the files and can remove them again.
+
+This repository has its own top-level `src/` directory, so point `makepkg`
+at a separate build directory:
+
+```sh
+BUILDDIR="$PWD/.makepkg" makepkg --cleanbuild
+```
+
+The `PKGBUILD` builds from a pinned upstream source tarball, not from your
+local working tree. `makepkg` writes a `.pkg.tar.zst` into the repository
+root, which you can then hand to pacman:
+
+```sh
+sudo pacman -U dotfiles-doctor-*.pkg.tar.zst
+sudo pacman -R dotfiles-doctor
+```
+
+Dotfiles Doctor is not published on the AUR.
+
+## Documentation
+
+- `man dotdoc` — manual page, installed together with the binary
+- [docs/CODING_CONVENTIONS.md](docs/CODING_CONVENTIONS.md) — project-specific C++ conventions
+- [GitHub issues](https://github.com/seekerkrt/dotfiles-doctor/issues) — roadmap and planned diagnostics
 
 ## License
 
