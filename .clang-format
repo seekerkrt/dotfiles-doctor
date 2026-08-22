@@ -27,7 +27,8 @@ FixNamespaceComments: false
 
 IncludeBlocks: Preserve
 SortIncludes:
-  Enabled: false
+  Enabled: true
+  IgnoreCase: false
 SortUsingDeclarations: Never
 
 IndentCaseLabels: true
@@ -44,3 +45,6 @@ SpaceBeforeParens: Never
 SpacesBeforeTrailingComments: 0
 SpacesInCStyleCastParentheses: false
 SpacesInSquareBrackets: false
+SpacesInLineCommentPrefix:
+  Minimum: 1
+  Maximum: 1
