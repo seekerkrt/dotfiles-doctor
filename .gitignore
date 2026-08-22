@@ -21,4 +21,10 @@ compile_commands.json
 *~
 .DS_Store
 
+# VSCODE local settings
 .vscode/
+
+# Arch package build output
+/.makepkg/
+/dotfiles-doctor-*.tar.gz
+/*.pkg.tar.*
