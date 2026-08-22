@@ -3,7 +3,7 @@
 English: [README.md](README.md)
 
 Dotfiles Doctorは、dotfilesおよびGNU Stowで管理された環境向けの、小さな診断
-ツールです。CLI command名は`dotdoctor`です。
+ツールです。CLI command名は`dotdoc`です。
 
 ## 概要
 

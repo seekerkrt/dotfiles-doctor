@@ -2,17 +2,17 @@ cmake_minimum_required(VERSION 3.20)
 
 project(dotfiles-doctor LANGUAGES CXX)
 
-add_executable(dotdoctor
+add_executable(dotdoc
     src/dotdoctor.cpp
 )
 
-target_compile_features(dotdoctor PRIVATE cxx_std_20)
+target_compile_features(dotdoc PRIVATE cxx_std_20)
 
-set_target_properties(dotdoctor PROPERTIES
+set_target_properties(dotdoc PROPERTIES
     CXX_EXTENSIONS OFF
 )
 
-target_compile_options(dotdoctor PRIVATE
+target_compile_options(dotdoc PRIVATE
     -Wall
     -Wextra
     -Wpedantic
@@ -22,9 +22,9 @@ include(CTest)
 
 if(BUILD_TESTING)
     add_test(
-        NAME dotdoctor_integration
+        NAME dotdoc_integration
         COMMAND sh
-            ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_dotdoctor.sh
-            $<TARGET_FILE:dotdoctor>
+            ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_dotdoc.sh
+            $<TARGET_FILE:dotdoc>
     )
 endif()
