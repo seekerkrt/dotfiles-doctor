@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 project(dotfiles-doctor VERSION 0.1.0 LANGUAGES CXX)
 
+include(GNUInstallDirs)
+
 add_executable(dotdoc
     src/dotdoctor.cpp
 )
@@ -33,3 +35,19 @@ if(BUILD_TESTING)
             ${PROJECT_VERSION}
     )
 endif()
+
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/man/dotdoc.1.in
+    ${CMAKE_CURRENT_BINARY_DIR}/dotdoc.1
+    @ONLY
+)
+
+install(
+    TARGETS dotdoc
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/dotdoc.1
+    DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
+)
