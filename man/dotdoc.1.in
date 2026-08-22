@@ -1,0 +1,78 @@
+.TH DOTDOC 1 "August 2026" "dotdoc @PROJECT_VERSION@" "User Commands"
+.SH NAME
+dotdoc \- scan a dotfiles tree for broken symbolic links
+.SH SYNOPSIS
+.B dotdoc
+.RI [ OPTIONS ]
+.RI [ PATH ]
+.SH DESCRIPTION
+.B dotdoc
+scans a dotfiles tree recursively and reports broken symbolic links.
+
+Without
+.IR PATH ,
+the directory
+.B $HOME/dotfiles
+is scanned.
+
+With
+.IR PATH ,
+only the specified directory is scanned.
+
+Directory symbolic links are inspected as symbolic links but their target
+directories are not traversed.
+.SH OPTIONS
+.TP
+.BR \-h ", " \-\-help
+Show help information and exit.
+.TP
+.B \-\-version
+Show version information and exit.
+.SH OUTPUT
+Diagnostic findings are written to standard output.
+
+Invocation and filesystem errors are written to standard error.
+.SH EXIT STATUS
+.TP
+.B 0
+The scan completed successfully with no findings.
+.TP
+.B 1
+The scan completed successfully and diagnostic findings were found.
+This does not indicate program failure.
+.TP
+.B 2
+An invocation, filesystem, or scan error occurred.
+.SH EXAMPLES
+Scan the default dotfiles tree:
+.PP
+.nf
+.RS
+dotdoc
+.RE
+.fi
+.PP
+Scan a specific directory:
+.PP
+.nf
+.RS
+dotdoc ~/dotfiles
+.RE
+.fi
+.PP
+Display help:
+.PP
+.nf
+.RS
+dotdoc --help
+.RE
+.fi
+.SH FILES
+.TP
+.B $HOME/dotfiles
+Default scan root when no
+.I PATH
+is specified.
+.SH LICENSE
+Dotfiles Doctor is licensed under the GNU General Public License,
+version 3 or later.
