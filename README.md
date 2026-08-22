@@ -16,8 +16,7 @@ tells you what looks wrong and leaves the fix to you.
 
 ## Status
 
-Early development, working toward the first release. `dotdoc --version`
-currently reports `0.1.0`, and there is no tagged release yet.
+Early development. This source tree reports version `0.1.0`.
 
 Available today:
 
@@ -149,16 +148,22 @@ A `PKGBUILD` is included in the repository root. On Arch Linux, install
 Dotfiles Doctor as a package rather than from source, so that pacman owns
 the files and can remove them again.
 
-This repository has its own top-level `src/` directory, so point `makepkg`
-at a separate build directory:
-
 ```sh
-BUILDDIR="$PWD/.makepkg" makepkg --cleanbuild
+git clone https://github.com/seekerkrt/dotfiles-doctor.git
+cd dotfiles-doctor
+makepkg -si
 ```
 
-The `PKGBUILD` builds from a pinned upstream source tarball, not from your
-local working tree. `makepkg` writes a `.pkg.tar.zst` into the repository
-root, which you can then hand to pacman:
+The `PKGBUILD` reads the version from the repository root `VERSION` file and
+builds from the matching upstream Git tag `v<version>`, not from your local
+working tree, so that tag has to exist upstream.
+
+`makepkg` uses its own `src/` and `pkg/` directories in the repository root.
+This project keeps its own C++ sources in `source/`, so `makepkg -csi` can
+clean up after itself without deleting them.
+
+`makepkg` also writes the built `.pkg.tar.zst` into the repository root, so
+you can install or remove it with pacman directly:
 
 ```sh
 sudo pacman -U dotfiles-doctor-*.pkg.tar.zst

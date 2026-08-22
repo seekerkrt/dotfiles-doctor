@@ -45,8 +45,9 @@ int scan_broken_symlinks(const fs::path& scan_root, std::vector<Finding>& findin
             const auto target_status = it->status(ec);
 
             // A broken symlink can produce both file_type::not_found and ENOENT.
-            // Classify not_found before treating ec as a scan error.
-            if(target_status.type() == fs::file_type::not_found) {
+            // A symlink loop reports ELOOP instead, but is equally unresolvable.
+            // Classify both before treating ec as a scan error.
+            if(target_status.type() == fs::file_type::not_found || ec == std::errc::too_many_symbolic_link_levels) {
                 ec.clear();
 
                 const auto raw_target = fs::read_symlink(it->path(), ec);

@@ -1,11 +1,14 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(dotfiles-doctor VERSION 0.1.0 LANGUAGES CXX)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" DOTDOC_PROJECT_VERSION)
+string(STRIP "${DOTDOC_PROJECT_VERSION}" DOTDOC_PROJECT_VERSION)
+
+project(dotfiles-doctor VERSION "${DOTDOC_PROJECT_VERSION}" LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
 add_executable(dotdoc
-    src/dotdoctor.cpp
+    source/dotdoctor.cpp
 )
 
 target_compile_definitions(dotdoc PRIVATE

@@ -364,6 +364,35 @@ expect_result \
     "dotdoc $DOTDOC_VERSION" \
     env -u HOME "$DOTDOC" --version
 
+# 23. Self-referential symlink loop
+
+root="$TMP_ROOT/loop-self"
+mkdir -p "$root"
+ln -s self-link "$root/self-link"
+
+expect_result \
+    "self-referential symlink loop" \
+    1 \
+    'BROKEN: "self-link" -> "self-link"' \
+    "$DOTDOC" "$root"
+
+# 24. Mutual symlink loop
+
+root="$TMP_ROOT/loop-mutual"
+mkdir -p "$root"
+ln -s b-link "$root/a-link"
+ln -s a-link "$root/b-link"
+
+expected=$(printf '%s\n%s' \
+    'BROKEN: "a-link" -> "b-link"' \
+    'BROKEN: "b-link" -> "a-link"')
+
+expect_result \
+    "mutual symlink loop" \
+    1 \
+    "$expected" \
+    "$DOTDOC" "$root"
+
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 
 if [ "$failed" -ne 0 ]; then
