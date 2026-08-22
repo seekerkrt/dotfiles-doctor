@@ -58,6 +58,14 @@ expect_result()
         return
     fi
 
+    if [ -s "$stderr_file" ]; then
+        fail "$name"
+        printf '  expected stderr to be empty\n'
+        printf '  actual stderr:\n' >&2
+        cat "$stderr_file" >&2
+        return
+    fi
+
     pass "$name"
 }
 
@@ -79,6 +87,20 @@ expect_exit()
         printf '  actual exit:   %s\n' "$actual_rc"
         cat "$stdout_file"
         cat "$stderr_file" >&2
+        return
+    fi
+
+    if [ -s "$stdout_file" ]; then
+        fail "$name"
+        printf '  expected stdout to be empty\n'
+        printf '  actual stdout:\n'
+        cat "$stdout_file"
+        return
+    fi
+
+    if [ ! -s "$stderr_file" ]; then
+        fail "$name"
+        printf '  expected stderr output\n'
         return
     fi
 
@@ -228,6 +250,20 @@ expect_result \
     1 \
     'BROKEN: "default-broken" -> "missing-default"' \
     env HOME="$home" "$DOTDOCTOR"
+
+# 13. HOME unset
+
+expect_exit \
+    "HOME unset" \
+    2 \
+    env -u HOME "$DOTDOCTOR"
+
+# 14. HOME empty
+
+expect_exit \
+    "HOME empty" \
+    2 \
+    env HOME= "$DOTDOCTOR"
 
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 
