@@ -2,12 +2,13 @@
 
 set -u
 
-if [ "$#" -ne 1 ]; then
-    echo "usage: $0 <dotdoc-binary>" >&2
+if [ "$#" -ne 2 ]; then
+    echo "usage: $0 <dotdoc-binary> <version>" >&2
     exit 2
 fi
 
-DOTDOCTOR=$1
+DOTDOC=$1
+DOTDOC_VERSION=$2
 TMP_ROOT=$(mktemp -d)
 
 trap 'rm -rf "$TMP_ROOT"' EXIT HUP INT TERM
@@ -25,6 +26,46 @@ fail()
 {
     printf 'FAIL: %s\n' "$1"
     failed=$((failed + 1))
+}
+
+expect_stdout_contains()
+{
+    name=$1
+    expected_text=$2
+    shift 2
+
+    stdout_file="$TMP_ROOT/stdout"
+    stderr_file="$TMP_ROOT/stderr"
+
+    "$@" >"$stdout_file" 2>"$stderr_file"
+    actual_rc=$?
+
+    if [ "$actual_rc" -ne 0 ]; then
+        fail "$name"
+        printf '  expected exit: 0\n'
+        printf '  actual exit:   %s\n' "$actual_rc"
+        cat "$stdout_file"
+        cat "$stderr_file" >&2
+        return
+    fi
+
+    if ! grep -Fq -- "$expected_text" "$stdout_file"; then
+        fail "$name"
+        printf '  expected stdout to contain:\n%s\n' "$expected_text"
+        printf '  actual stdout:\n'
+        cat "$stdout_file"
+        return
+    fi
+
+    if [ -s "$stderr_file" ]; then
+        fail "$name"
+        printf '  expected stderr to be empty\n'
+        printf '  actual stderr:\n' >&2
+        cat "$stderr_file" >&2
+        return
+    fi
+
+    pass "$name"
 }
 
 expect_result()
@@ -116,7 +157,7 @@ expect_result \
     "empty directory" \
     0 \
     'OK: no broken symlinks found.' \
-    "$DOTDOCTOR" "$root"
+    "$DOTDOC" "$root"
 
 # 2. Regular file only
 
@@ -128,7 +169,7 @@ expect_result \
     "regular file only" \
     0 \
     'OK: no broken symlinks found.' \
-    "$DOTDOCTOR" "$root"
+    "$DOTDOC" "$root"
 
 # 3. Valid relative symlink
 
@@ -141,7 +182,7 @@ expect_result \
     "valid relative symlink" \
     0 \
     'OK: no broken symlinks found.' \
-    "$DOTDOCTOR" "$root"
+    "$DOTDOC" "$root"
 
 # 4. Broken relative symlink
 
@@ -153,7 +194,7 @@ expect_result \
     "broken relative symlink" \
     1 \
     'BROKEN: "broken-link" -> "missing-file"' \
-    "$DOTDOCTOR" "$root"
+    "$DOTDOC" "$root"
 
 # 5. Valid absolute symlink
 
@@ -167,7 +208,7 @@ expect_result \
     "valid absolute symlink" \
     0 \
     'OK: no broken symlinks found.' \
-    "$DOTDOCTOR" "$root"
+    "$DOTDOC" "$root"
 
 # 6. Broken absolute symlink
 
@@ -180,7 +221,7 @@ expect_result \
     "broken absolute symlink" \
     1 \
     "BROKEN: \"broken-link\" -> \"$target\"" \
-    "$DOTDOCTOR" "$root"
+    "$DOTDOC" "$root"
 
 # 7. Directory symlink must not be followed
 
@@ -195,14 +236,14 @@ expect_result \
     "directory symlink is not followed" \
     0 \
     'OK: no broken symlinks found.' \
-    "$DOTDOCTOR" "$root"
+    "$DOTDOC" "$root"
 
 # 8. Nonexistent scan root
 
 expect_exit \
     "nonexistent scan root" \
     2 \
-    "$DOTDOCTOR" "$TMP_ROOT/does-not-exist"
+    "$DOTDOC" "$TMP_ROOT/does-not-exist"
 
 # 9. Non-directory scan root
 
@@ -212,14 +253,14 @@ touch "$root"
 expect_exit \
     "non-directory scan root" \
     2 \
-    "$DOTDOCTOR" "$root"
+    "$DOTDOC" "$root"
 
 # 10. Too many positional arguments
 
 expect_exit \
     "too many positional arguments" \
     2 \
-    "$DOTDOCTOR" one two
+    "$DOTDOC" one two
 
 # 11. Multiple findings must be sorted
 
@@ -237,7 +278,7 @@ expect_result \
     "multiple findings are sorted" \
     1 \
     "$expected" \
-    "$DOTDOCTOR" "$root"
+    "$DOTDOC" "$root"
 
 # 12. Default $HOME/dotfiles
 
@@ -249,21 +290,79 @@ expect_result \
     "default HOME/dotfiles" \
     1 \
     'BROKEN: "default-broken" -> "missing-default"' \
-    env HOME="$home" "$DOTDOCTOR"
+    env HOME="$home" "$DOTDOC"
 
 # 13. HOME unset
 
 expect_exit \
     "HOME unset" \
     2 \
-    env -u HOME "$DOTDOCTOR"
+    env -u HOME "$DOTDOC"
 
 # 14. HOME empty
 
 expect_exit \
     "HOME empty" \
     2 \
-    env HOME= "$DOTDOCTOR"
+    env HOME= "$DOTDOC"
+
+# 15. Short help option
+
+expect_stdout_contains \
+    "-h shows help" \
+    'Usage: dotdoc [OPTIONS] [PATH]' \
+    "$DOTDOC" -h
+
+# 16. Long help option
+
+expect_stdout_contains \
+    "--help shows default path" \
+    'Without PATH, $HOME/dotfiles is scanned.' \
+    "$DOTDOC" --help
+
+# 17. Help lists version option
+
+expect_stdout_contains \
+    "--help lists version option" \
+    '--version' \
+    "$DOTDOC" --help
+
+# 18. Help documents exit status
+
+expect_stdout_contains \
+    "--help documents exit status" \
+    'Exit status:' \
+    "$DOTDOC" --help
+
+# 19. Help explains exit status 1
+
+expect_stdout_contains \
+    "--help explains exit status 1" \
+    'Exit status 1 indicates diagnostic findings, not program failure.' \
+    "$DOTDOC" --help
+
+# 20. Version
+
+expect_result \
+    "--version" \
+    0 \
+    "dotdoc $DOTDOC_VERSION" \
+    "$DOTDOC" --version
+
+# 21. Help must not depend on HOME
+
+expect_stdout_contains \
+    "--help works without HOME" \
+    'Usage: dotdoc [OPTIONS] [PATH]' \
+    env -u HOME "$DOTDOC" --help
+
+# 22. Version must not depend on HOME
+
+expect_result \
+    "--version works without HOME" \
+    0 \
+    "dotdoc $DOTDOC_VERSION" \
+    env -u HOME "$DOTDOC" --version
 
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 

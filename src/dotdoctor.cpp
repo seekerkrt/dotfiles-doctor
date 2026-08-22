@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <string>
 #include <system_error>
 #include <vector>
 
@@ -71,17 +72,51 @@ int scan_broken_symlinks(const fs::path& scan_root, std::vector<Finding>& findin
     return kExitClean;
 }
 
+void print_help() {
+    std::cout << "Usage: dotdoc [OPTIONS] [PATH]\n"
+              << "\n"
+              << "Scan a dotfiles tree for broken symbolic links.\n"
+              << "\n"
+              << "Without PATH, $HOME/dotfiles is scanned.\n"
+              << "With PATH, only the specified directory is scanned.\n"
+              << "\n"
+              << "Options:\n"
+              << "  -h, --help    Show this help and exit\n"
+              << "  --version     Show version information and exit\n"
+              << "\n"
+              << "Exit status:\n"
+              << "  0  Scan completed with no findings\n"
+              << "  1  Scan completed with findings\n"
+              << "  2  Invocation or filesystem error\n"
+              << "\n"
+              << "Exit status 1 indicates diagnostic findings, not program failure.\n";
+}
+
+void print_version() {
+    std::cout << "dotdoc " << DOTDOC_VERSION << '\n';
+}
+
 int main(int argc, char* argv[]) {
-    if(argc > 2) {
-        std::cerr << "Usage: " << argv[0] << " [path]\n";
-        return kExitError;
-    }
+    std::vector<std::string> args(argv + 1, argv + argc);
 
     fs::path scan_root;
+    if(args.size() >= 2) {
+        std::cerr << "Usage: dotdoc [OPTIONS] [PATH]\n";
+        return kExitError;
+    }
+    if(args.size() == 1) {
+        if(args[0] == "-h" || args[0] == "--help") {
+            print_help();
+            return kExitClean;
+        }
+        if(args[0] == "--version") {
+            print_version();
+            return kExitClean;
+        }
 
-    if(argc == 2) {
-        scan_root = argv[1];
-    } else {
+        // If a path is provided, use it as the scan root.
+        scan_root = args[0];
+    } else if(args.empty()) {
         const char* home = std::getenv("HOME");
         if(home == nullptr || *home == '\0') {
             std::cerr << "Error: HOME environment variable is not set.\n";
