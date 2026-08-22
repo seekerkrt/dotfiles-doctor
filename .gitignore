@@ -24,7 +24,10 @@ compile_commands.json
 # VSCODE local settings
 .vscode/
 
-# Arch package build output
+# Arch package build output (makepkg runs in the repository root)
+/src/
+/pkg/
 /.makepkg/
+/dotfiles-doctor-src/
 /dotfiles-doctor-*.tar.gz
 /*.pkg.tar.*

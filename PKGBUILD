@@ -1,24 +1,31 @@
 # Maintainer: seekerkrt
 pkgname=dotfiles-doctor
-pkgver=0.1.0
+_srcname=dotfiles-doctor-src
+
+# The repository root VERSION file is the single authority for the version.
+# This PKGBUILD sits next to it, so read it directly.
+pkgver=$(tr -d '[:space:]' < "$startdir/VERSION")
 pkgrel=1
 pkgdesc='Read-only diagnostic CLI for dotfiles trees'
 arch=('x86_64')
 url='https://github.com/seekerkrt/dotfiles-doctor'
 license=('GPL-3.0-or-later')
 depends=('glibc' 'libgcc' 'libstdc++')
-makedepends=('cmake')
+makedepends=('cmake' 'git')
 
-_commit=da5569dd7944f2d81c67f32f490e290120e023c1
-_srcdir="$pkgname-$_commit"
+# Build from the upstream release tag, not from the local working tree.
+source=("$_srcname::git+$url.git#tag=v$pkgver")
+sha256sums=('SKIP')
 
-source=("$pkgname-$_commit.tar.gz::$url/archive/$_commit.tar.gz")
-sha256sums=('96705260c4b39aa3b3f4a82a79635a4762e9d50a320bbff70e28a4177cf76016')
+# The checked out tag carries its own VERSION file, which stays authoritative.
+pkgver() {
+    tr -d '[:space:]' < "$srcdir/$_srcname/VERSION"
+}
 
 build() {
     cmake \
         -B build \
-        -S "$_srcdir" \
+        -S "$_srcname" \
         -DCMAKE_BUILD_TYPE=None \
         -DCMAKE_INSTALL_PREFIX=/usr \
         -DBUILD_TESTING=ON

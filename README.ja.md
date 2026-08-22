@@ -16,9 +16,8 @@ GNU Stowで管理された環境も主要な対象の一つですが、GNU Stow�
 
 ## 現状
 
-Early development（初期開発段階）で、最初のreleaseへ向けて開発中です。
-現時点で`dotdoc --version`が返すversionは`0.1.0`で、tag付きreleaseはまだ
-ありません。
+Early development（初期開発段階）です。このsource treeが返すversionは`0.1.0`
+です。
 
 現在利用できる機能は次のとおりです。
 
@@ -150,16 +149,22 @@ repository rootに`PKGBUILD`を用意しています。Arch Linuxでは、source
 よりもpackageとしてのinstallを推奨します。pacmanがファイルを管理し、削除も
 pacmanで行えるためです。
 
-このrepository自身がトップレベルに`src/`directoryを持つため、makepkgの作業
-directoryを分けて指定してください。
-
 ```sh
-BUILDDIR="$PWD/.makepkg" makepkg --cleanbuild
+git clone https://github.com/seekerkrt/dotfiles-doctor.git
+cd dotfiles-doctor
+makepkg -si
 ```
 
-`PKGBUILD`はpin済みのupstream source tarballからbuildするもので、手元の
-working treeをbuildするわけではありません。makepkgはrepository rootへ
-`.pkg.tar.zst`を生成するので、pacmanでinstall / removeします。
+`PKGBUILD`はrepository rootの`VERSION`からversionを読み、対応するupstreamの
+Git tag `v<version>`からbuildします。手元のworking treeをbuildするわけでは
+ないため、そのtagがupstreamに存在している必要があります。
+
+makepkgはrepository root直下に自身の`src/`と`pkg/`を作成します。本project
+自身のC++ sourceは`source/`に置いているため、`makepkg -csi`がこれらを片付け
+てもproject sourceは削除されません。
+
+makepkgはbuildした`.pkg.tar.zst`もrepository rootへ生成するので、pacmanから
+直接install / removeできます。
 
 ```sh
 sudo pacman -U dotfiles-doctor-*.pkg.tar.zst
