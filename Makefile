@@ -18,4 +18,5 @@ run: build
 	./$(BUILD_DIR)/dotdoc
 
 clean:
+	@test ! -L compile_commands.json || unlink compile_commands.json
 	cmake --build $(BUILD_DIR) --target clean
