@@ -1,11 +1,12 @@
 BUILD_DIR := build
+BUILD_TYPE ?= Debug
 
 .PHONY: all configure build test run clean
 
 all: build
 
 configure:
-	cmake -S . -B $(BUILD_DIR)
+	cmake -S . -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=$(BUILD_TYPE)
 
 build: configure
 	cmake --build $(BUILD_DIR)

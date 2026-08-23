@@ -5,6 +5,10 @@ string(STRIP "${DOTDOC_PROJECT_VERSION}" DOTDOC_PROJECT_VERSION)
 
 project(dotfiles-doctor VERSION "${DOTDOC_PROJECT_VERSION}" LANGUAGES CXX)
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+endif()
+
 include(GNUInstallDirs)
 
 add_executable(dotdoc
