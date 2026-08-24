@@ -2,17 +2,25 @@
 
 日本語: [README.ja.md](README.ja.md)
 
-Dotfiles Doctor is a small, read-only diagnostic CLI for dotfiles trees.
+Dotfiles Doctor is a small, read-only diagnostic CLI for directory trees,
+with dotfiles as its primary use case.
 The command is `dotdoc`.
 
 ## Overview
 
-`dotdoc` scans a dotfiles tree, reports the problems it finds, and does not
-modify the scanned files.
+`dotdoc` recursively scans a directory tree, reports the problems it finds,
+and does not modify the scanned files.
 
-GNU Stow managed environments are a primary target, but Dotfiles Doctor is
-not a GNU Stow-only tool. It is also not a dotfiles manager or deployer: it
-tells you what looks wrong and leaves the fix to you.
+Dotfiles and GNU Stow managed environments are primary use cases, but
+Dotfiles Doctor is not limited to dotfiles or GNU Stow. When an explicit
+path is provided, `dotdoc` can be used as a generic directory tree
+diagnostic tool.
+
+Diagnostics are based on filesystem facts rather than GNU Stow-specific
+metadata or layout. Dotfiles Doctor is also not a dotfiles manager or
+deployer: it tells you what looks wrong and leaves the fix to you.
+
+In short, Dotfiles Doctor is **dotfiles-first, but not dotfiles-only**.
 
 ## Status
 
@@ -34,9 +42,21 @@ dotdoc [OPTIONS] [PATH]
 ```
 
 - `dotdoc` — scan `$HOME/dotfiles`
-- `dotdoc PATH` — scan only the given directory
+- `dotdoc PATH` — scan the specified directory tree
 - `dotdoc -h`, `dotdoc --help` — show usage and exit
 - `dotdoc --version` — show version information and exit
+
+For example, the default dotfiles tree can be scanned with:
+
+```sh
+dotdoc
+```
+
+An explicitly selected directory tree can be scanned with:
+
+```sh
+dotdoc "$HOME"
+```
 
 `--help` and `--version` are handled before `$HOME` and the scan root are
 inspected, so they work even when neither is usable.
@@ -74,10 +94,20 @@ means `dotdoc` itself could not do its job.
 ## Behavior and safety
 
 - The scan is recursive.
+- Without `PATH`, the scan root remains `$HOME/dotfiles`.
+- With `PATH`, the specified directory is used as the scan root.
 - Symbolic links are inspected as symbolic links. A directory symbolic link
   is checked itself, but the tree behind it is not traversed.
+- Diagnostics are based on filesystem state and do not require a GNU Stow
+  layout.
 - Dotfiles Doctor is read-only. It never creates, moves, edits, or deletes
   your files, and it performs no automatic repair.
+
+Scanning a broad directory tree such as `$HOME` or `/` can produce a large
+number of findings. Runtime environments, containers, Wine or Proton,
+Electron applications, and similar software may create temporary,
+environment-specific, or intentionally unresolved symbolic links that are
+still correctly reported as filesystem findings.
 
 ## Build
 
