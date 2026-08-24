@@ -1,13 +1,13 @@
 .TH DOTDOC 1 "August 2026" "dotdoc @PROJECT_VERSION@" "User Commands"
 .SH NAME
-dotdoc \- scan a directory tree for broken symbolic links
+dotdoc \- scan a directory tree for symbolic-link findings
 .SH SYNOPSIS
 .B dotdoc
 .RI [ OPTIONS ]
 .RI [ PATH ]
 .SH DESCRIPTION
 .B dotdoc
-scans a directory tree recursively and reports broken symbolic links.
+scans a directory tree recursively and reports broken and absolute symbolic links.
 
 Dotfiles are the primary use case, but an explicitly specified
 .IR PATH

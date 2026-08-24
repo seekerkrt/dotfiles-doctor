@@ -156,7 +156,7 @@ mkdir -p "$root"
 expect_result \
     "empty directory" \
     0 \
-    'OK: no broken symlinks found.' \
+    'OK: no findings.' \
     "$DOTDOC" "$root"
 
 # 2. Regular file only
@@ -168,7 +168,7 @@ touch "$root/file"
 expect_result \
     "regular file only" \
     0 \
-    'OK: no broken symlinks found.' \
+    'OK: no findings.' \
     "$DOTDOC" "$root"
 
 # 3. Valid relative symlink
@@ -181,7 +181,7 @@ ln -s real-file "$root/valid-link"
 expect_result \
     "valid relative symlink" \
     0 \
-    'OK: no broken symlinks found.' \
+    'OK: no findings.' \
     "$DOTDOC" "$root"
 
 # 4. Broken relative symlink
@@ -192,7 +192,7 @@ ln -s missing-file "$root/broken-link"
 
 expected=$(printf '%s\n%s' \
     'BROKEN: "broken-link" -> "missing-file"' \
-    'Found 1 broken symlink.')
+    'Found 1 finding.')
 
 expect_result \
     "broken relative symlink" \
@@ -208,10 +208,14 @@ target="$TMP_ROOT/absolute-real-file"
 touch "$target"
 ln -s "$target" "$root/valid-link"
 
+expected=$(printf '%s\n%s' \
+    "ABSOLUTE: \"valid-link\" -> \"$target\"" \
+    'Found 1 finding.')
+
 expect_result \
     "valid absolute symlink" \
-    0 \
-    'OK: no broken symlinks found.' \
+    1 \
+    "$expected" \
     "$DOTDOC" "$root"
 
 # 6. Broken absolute symlink
@@ -221,9 +225,10 @@ mkdir -p "$root"
 target="$TMP_ROOT/absolute-missing-file"
 ln -s "$target" "$root/broken-link"
 
-expected=$(printf '%s\n%s' \
+expected=$(printf '%s\n%s\n%s' \
     "BROKEN: \"broken-link\" -> \"$target\"" \
-    'Found 1 broken symlink.')
+    "ABSOLUTE: \"broken-link\" -> \"$target\"" \
+    'Found 2 findings.')
 
 expect_result \
     "broken absolute symlink" \
@@ -240,10 +245,14 @@ mkdir -p "$root" "$target_dir"
 ln -s missing-child "$target_dir/broken-child"
 ln -s "$target_dir" "$root/directory-link"
 
+expected=$(printf '%s\n%s' \
+    "ABSOLUTE: \"directory-link\" -> \"$target_dir\"" \
+    'Found 1 finding.')
+
 expect_result \
     "directory symlink is not followed" \
-    0 \
-    'OK: no broken symlinks found.' \
+    1 \
+    "$expected" \
     "$DOTDOC" "$root"
 
 # 8. Nonexistent scan root
@@ -275,13 +284,16 @@ expect_exit \
 root="$TMP_ROOT/multiple"
 mkdir -p "$root"
 
+target="$TMP_ROOT/absolute-target"
+touch "$target"
+
 ln -s missing-z "$root/z-broken"
-ln -s missing-a "$root/a-broken"
+ln -s "$target" "$root/a-absolute"
 
 expected=$(printf '%s\n%s\n%s' \
-    'BROKEN: "a-broken" -> "missing-a"' \
+    "ABSOLUTE: \"a-absolute\" -> \"$target\"" \
     'BROKEN: "z-broken" -> "missing-z"' \
-    'Found 2 broken symlinks.')
+    'Found 2 findings.')
 
 expect_result \
     "multiple findings are sorted" \
@@ -297,7 +309,7 @@ ln -s missing-default "$home/dotfiles/default-broken"
 
 expected=$(printf '%s\n%s' \
     'BROKEN: "default-broken" -> "missing-default"' \
-    'Found 1 broken symlink.')
+    'Found 1 finding.')
 
 expect_result \
     "default HOME/dotfiles" \
@@ -385,7 +397,7 @@ ln -s self-link "$root/self-link"
 
 expected=$(printf '%s\n%s' \
     'BROKEN: "self-link" -> "self-link"' \
-    'Found 1 broken symlink.')
+    'Found 1 finding.')
 
 expect_result \
     "self-referential symlink loop" \
@@ -403,7 +415,7 @@ ln -s a-link "$root/b-link"
 expected=$(printf '%s\n%s\n%s' \
     'BROKEN: "a-link" -> "b-link"' \
     'BROKEN: "b-link" -> "a-link"' \
-    'Found 2 broken symlinks.')
+    'Found 2 findings.')
 
 expect_result \
     "mutual symlink loop" \
@@ -419,7 +431,7 @@ ln -s missing "$root/broken"
 
 expected=$(printf '%s\n%s' \
     'BROKEN: "broken" -> "missing"' \
-    'Found 1 broken symlink.')
+    'Found 1 finding.')
 
 expect_result \
     "single finding summary" \
@@ -437,7 +449,7 @@ ln -s missing-a "$root/a"
 expected=$(printf '%s\n%s\n%s' \
     'BROKEN: "a" -> "missing-a"' \
     'BROKEN: "b" -> "missing-b"' \
-    'Found 2 broken symlinks.')
+    'Found 2 findings.')
 
 expect_result \
     "multiple findings summary" \
