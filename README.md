@@ -29,6 +29,7 @@ Early development. This source tree reports version `0.1.0`.
 Available today:
 
 - Broken symbolic link detection
+- Absolute symbolic link detection
 - `-h` / `--help`
 - `--version`
 
@@ -63,22 +64,23 @@ inspected, so they work even when neither is usable.
 
 ## Output
 
-Findings are written to standard output, one line per broken symbolic link,
+Findings are written to standard output, one line per diagnostic finding,
 sorted by path. Each line shows the path relative to the scan root followed
 by the raw symbolic link target.
+A single symbolic link can produce more than one finding.
 
 ```console
 $ dotdoc ~/dotfiles
+ABSOLUTE: "gitconfig" -> "/home/example/.config/git/config"
 BROKEN: "nvim/init.lua" -> "../missing/init.lua"
-BROKEN: "zshrc" -> "/home/example/does-not-exist/zshrc"
-Found 2 broken symlinks.
+Found 2 findings.
 ```
 
 When nothing is found:
 
 ```console
 $ dotdoc ~/dotfiles
-OK: no broken symlinks found.
+OK: no findings.
 ```
 
 Invocation and filesystem errors are written to standard error.

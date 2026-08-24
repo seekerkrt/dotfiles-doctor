@@ -30,6 +30,7 @@ Early development（初期開発段階）です。このsource treeが返すvers
 現在利用できる機能は次のとおりです。
 
 - broken symbolic linkの検出
+- absolute symbolic linkの検出
 - `-h` / `--help`
 - `--version`
 
@@ -63,22 +64,23 @@ dotdoc "$HOME"
 
 ## 出力
 
-findingsは標準出力へ書き出されます。broken symbolic link 1件につき1行で、
+findingsは標準出力へ書き出されます。diagnostic finding 1件につき1行で、
 path順に並びます。各行にはscan rootからの相対pathと、symbolic linkのraw target
 が表示されます。
+1つのsymbolic linkから複数のfindingsが報告される場合があります。
 
 ```console
 $ dotdoc ~/dotfiles
+ABSOLUTE: "gitconfig" -> "/home/example/.config/git/config"
 BROKEN: "nvim/init.lua" -> "../missing/init.lua"
-BROKEN: "zshrc" -> "/home/example/does-not-exist/zshrc"
-Found 2 broken symlinks.
+Found 2 findings.
 ```
 
 findingsがない場合は次のようになります。
 
 ```console
 $ dotdoc ~/dotfiles
-OK: no broken symlinks found.
+OK: no findings.
 ```
 
 invocation errorとfilesystem errorは標準エラー出力へ書き出されます。

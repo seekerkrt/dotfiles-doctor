@@ -14,7 +14,13 @@ constexpr int kExitClean = 0;
 constexpr int kExitFindings = 1;
 constexpr int kExitError = 2;
 
+enum class DiagnosticKind {
+    kAbsolute, // symlink target is absolute
+    kBroken, // symlink target is broken
+};
+
 struct Finding {
+    DiagnosticKind kind;
     fs::path path;
     fs::path raw_target;
 };
@@ -26,7 +32,7 @@ int report_filesystem_error(const char* action,
     return kExitError;
 }
 
-int scan_broken_symlinks(const fs::path& scan_root, std::vector<Finding>& findings) {
+int scan_diagnostic_findings(const fs::path& scan_root, std::vector<Finding>& findings) {
     std::error_code ec;
     fs::recursive_directory_iterator it(scan_root, ec);
     fs::recursive_directory_iterator end;
@@ -42,23 +48,28 @@ int scan_broken_symlinks(const fs::path& scan_root, std::vector<Finding>& findin
         }
 
         if(fs::is_symlink(entry_status)) {
-            const auto target_status = it->status(ec);
+            std::error_code status_ec;
+            const auto target_status = it->status(status_ec);
 
-            // A broken symlink can produce both file_type::not_found and ENOENT.
-            // A symlink loop reports ELOOP instead, but is equally unresolvable.
-            // Classify both before treating ec as a scan error.
-            if(target_status.type() == fs::file_type::not_found || ec == std::errc::too_many_symbolic_link_levels) {
-                ec.clear();
+            std::error_code read_ec;
+            const auto raw_target = fs::read_symlink(it->path(), read_ec);
 
-                const auto raw_target = fs::read_symlink(it->path(), ec);
-                if(ec) {
-                    return report_filesystem_error("failed to read symlink", it->path(), ec);
-                }
+            const bool is_broken = target_status.type() == fs::file_type::not_found || status_ec == std::errc::too_many_symbolic_link_levels;
 
-                findings.push_back({it->path(), raw_target});
-            } else if(ec) {
-                return report_filesystem_error(
-                    "failed to inspect symlink target", it->path(), ec);
+            if(!is_broken && status_ec) {
+                return report_filesystem_error("failed to inspect symlink target", it->path(), status_ec);
+            }
+
+            if(read_ec) {
+                return report_filesystem_error("failed to read symlink", it->path(), read_ec);
+            }
+
+            if(is_broken) {
+                findings.push_back({DiagnosticKind::kBroken, it->path(), raw_target});
+            }
+
+            if(raw_target.is_absolute()) {
+                findings.push_back({DiagnosticKind::kAbsolute, it->path(), raw_target});
             }
         }
 
@@ -76,7 +87,7 @@ int scan_broken_symlinks(const fs::path& scan_root, std::vector<Finding>& findin
 void print_help() {
     std::cout << "Usage: dotdoc [OPTIONS] [PATH]\n"
               << "\n"
-              << "Scan a directory tree for broken symbolic links.\n"
+              << "Scan a directory tree for symbolic-link findings.\n"
               << "\n"
               << "Without PATH, $HOME/dotfiles is scanned.\n"
               << "With PATH, the specified directory tree is scanned.\n"
@@ -147,30 +158,36 @@ int main(int argc, char* argv[]) {
 
     std::vector<Finding> findings;
 
-    const int scan_result = scan_broken_symlinks(scan_root, findings);
+    const int scan_result = scan_diagnostic_findings(scan_root, findings);
     if(scan_result != kExitClean) {
         return scan_result;
     }
 
     if(findings.empty()) {
-        std::cout << "OK: no broken symlinks found.\n";
+        std::cout << "OK: no findings.\n";
         return kExitClean;
     }
 
     std::sort(findings.begin(), findings.end(), [](const Finding& lhs, const Finding& rhs) {
+        if(lhs.path == rhs.path) {
+            return lhs.kind == DiagnosticKind::kBroken && rhs.kind == DiagnosticKind::kAbsolute;
+        }
         return lhs.path < rhs.path;
     });
 
     for(const auto& finding : findings) {
-        std::cout << "BROKEN: "
-                  << finding.path.lexically_relative(scan_root)
-                  << " -> "
-                  << finding.raw_target
-                  << '\n';
+        switch(finding.kind) {
+            case DiagnosticKind::kBroken:
+                std::cout << "BROKEN: " << finding.path.lexically_relative(scan_root) << " -> " << finding.raw_target << '\n';
+                break;
+            case DiagnosticKind::kAbsolute:
+                std::cout << "ABSOLUTE: " << finding.path.lexically_relative(scan_root) << " -> " << finding.raw_target << '\n';
+                break;
+        }
     }
 
     std::cout << "Found " << findings.size()
-              << " broken symlink"
+              << " finding"
               << (findings.size() == 1 ? "" : "s")
               << ".\n";
 
