@@ -2,17 +2,25 @@
 
 English: [README.md](README.md)
 
-Dotfiles Doctorは、dotfiles treeを対象とする小さなread-only診断CLIです。
+Dotfiles Doctorは、dotfilesを主要なユースケースとする、directory tree向けの
+小さなread-only診断CLIです。
 command名は`dotdoc`です。
 
 ## 概要
 
-`dotdoc`はdotfiles treeを走査し、見つかった問題を報告します。走査対象の
-ファイルは変更しません。
+`dotdoc`はdirectory treeを再帰的に走査し、見つかった問題を報告します。
+走査対象のファイルは変更しません。
 
-GNU Stowで管理された環境も主要な対象の一つですが、GNU Stow専用ツールでは
-ありません。dotfilesのmanagerやdeployerでもなく、おかしな箇所を報告するまでを
-役割とし、修正は利用者に委ねます。
+dotfilesやGNU Stowで管理された環境を主要なユースケースとしていますが、
+Dotfiles DoctorはdotfilesやGNU Stowだけに限定されたツールではありません。
+明示的にpathを指定した場合は、任意のdirectory treeを対象とする汎用的な
+diagnostic toolとして利用できます。
+
+diagnosticはGNU Stow固有のmetadataやdirectory構造ではなく、filesystem上の
+事実に基づいて行います。また、dotfilesのmanagerやdeployerでもなく、
+おかしな箇所を報告するまでを役割とし、修正は利用者に委ねます。
+
+つまり、Dotfiles Doctorは**dotfiles-first, but not dotfiles-only**です。
 
 ## 現状
 
@@ -34,9 +42,21 @@ dotdoc [OPTIONS] [PATH]
 ```
 
 - `dotdoc` — `$HOME/dotfiles`を走査する
-- `dotdoc PATH` — 指定したdirectoryだけを走査する
+- `dotdoc PATH` — 指定したdirectory treeを走査する
 - `dotdoc -h`、`dotdoc --help` — usageを表示して終了する
 - `dotdoc --version` — version情報を表示して終了する
+
+defaultのdotfiles treeは次のように走査できます。
+
+```sh
+dotdoc
+```
+
+明示的に指定したdirectory treeを走査する場合は次のようにします。
+
+```sh
+dotdoc "$HOME"
+```
 
 `--help`と`--version`は`$HOME`やscan rootの確認より先に処理されるため、
 どちらも利用できない状態でも動作します。
@@ -74,10 +94,19 @@ invocation errorとfilesystem errorは標準エラー出力へ書き出されま
 ## 動作と安全性
 
 - scanは再帰的に行います。
+- `PATH`を省略した場合、scan rootは従来どおり`$HOME/dotfiles`です。
+- `PATH`を指定した場合、そのdirectoryをscan rootとして使用します。
 - symbolic linkはsymbolic link自身として検査します。directory symbolic linkは
   それ自体を検査しますが、その先のtree（target tree）は辿りません。
+- diagnosticはfilesystemの状態に基づいて行い、GNU Stow固有のdirectory構造を
+  必要としません。
 - Dotfiles Doctorはread-onlyです。利用者のファイルを作成、移動、編集、削除する
   ことはなく、自動修復も行いません。
+
+`$HOME`や`/`のような広いdirectory treeを走査すると、大量のfindingsが現れる
+場合があります。runtime環境、container、WineやProton、Electron application
+などは、一時的、環境依存、または意図的に解決できないsymbolic linkを生成する
+ことがあります。それらもfilesystem上のfindingとして正しく報告されます。
 
 ## Build
 

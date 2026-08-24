@@ -76,10 +76,10 @@ int scan_broken_symlinks(const fs::path& scan_root, std::vector<Finding>& findin
 void print_help() {
     std::cout << "Usage: dotdoc [OPTIONS] [PATH]\n"
               << "\n"
-              << "Scan a dotfiles tree for broken symbolic links.\n"
+              << "Scan a directory tree for broken symbolic links.\n"
               << "\n"
               << "Without PATH, $HOME/dotfiles is scanned.\n"
-              << "With PATH, only the specified directory is scanned.\n"
+              << "With PATH, the specified directory tree is scanned.\n"
               << "\n"
               << "Options:\n"
               << "  -h, --help    Show this help and exit\n"
