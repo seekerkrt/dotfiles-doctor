@@ -190,10 +190,14 @@ root="$TMP_ROOT/broken-relative"
 mkdir -p "$root"
 ln -s missing-file "$root/broken-link"
 
+expected=$(printf '%s\n%s' \
+    'BROKEN: "broken-link" -> "missing-file"' \
+    'Found 1 broken symlink.')
+
 expect_result \
     "broken relative symlink" \
     1 \
-    'BROKEN: "broken-link" -> "missing-file"' \
+    "$expected" \
     "$DOTDOC" "$root"
 
 # 5. Valid absolute symlink
@@ -217,10 +221,14 @@ mkdir -p "$root"
 target="$TMP_ROOT/absolute-missing-file"
 ln -s "$target" "$root/broken-link"
 
+expected=$(printf '%s\n%s' \
+    "BROKEN: \"broken-link\" -> \"$target\"" \
+    'Found 1 broken symlink.')
+
 expect_result \
     "broken absolute symlink" \
     1 \
-    "BROKEN: \"broken-link\" -> \"$target\"" \
+    "$expected" \
     "$DOTDOC" "$root"
 
 # 7. Directory symlink must not be followed
@@ -270,9 +278,10 @@ mkdir -p "$root"
 ln -s missing-z "$root/z-broken"
 ln -s missing-a "$root/a-broken"
 
-expected=$(printf '%s\n%s' \
+expected=$(printf '%s\n%s\n%s' \
     'BROKEN: "a-broken" -> "missing-a"' \
-    'BROKEN: "z-broken" -> "missing-z"')
+    'BROKEN: "z-broken" -> "missing-z"' \
+    'Found 2 broken symlinks.')
 
 expect_result \
     "multiple findings are sorted" \
@@ -286,10 +295,14 @@ home="$TMP_ROOT/home"
 mkdir -p "$home/dotfiles"
 ln -s missing-default "$home/dotfiles/default-broken"
 
+expected=$(printf '%s\n%s' \
+    'BROKEN: "default-broken" -> "missing-default"' \
+    'Found 1 broken symlink.')
+
 expect_result \
     "default HOME/dotfiles" \
     1 \
-    'BROKEN: "default-broken" -> "missing-default"' \
+    "$expected" \
     env HOME="$home" "$DOTDOC"
 
 # 13. HOME unset
@@ -370,10 +383,14 @@ root="$TMP_ROOT/loop-self"
 mkdir -p "$root"
 ln -s self-link "$root/self-link"
 
+expected=$(printf '%s\n%s' \
+    'BROKEN: "self-link" -> "self-link"' \
+    'Found 1 broken symlink.')
+
 expect_result \
     "self-referential symlink loop" \
     1 \
-    'BROKEN: "self-link" -> "self-link"' \
+    "$expected" \
     "$DOTDOC" "$root"
 
 # 24. Mutual symlink loop
@@ -383,12 +400,47 @@ mkdir -p "$root"
 ln -s b-link "$root/a-link"
 ln -s a-link "$root/b-link"
 
-expected=$(printf '%s\n%s' \
+expected=$(printf '%s\n%s\n%s' \
     'BROKEN: "a-link" -> "b-link"' \
-    'BROKEN: "b-link" -> "a-link"')
+    'BROKEN: "b-link" -> "a-link"' \
+    'Found 2 broken symlinks.')
 
 expect_result \
     "mutual symlink loop" \
+    1 \
+    "$expected" \
+    "$DOTDOC" "$root"
+
+# 25. Single finding summary
+
+root="$TMP_ROOT/summary-single"
+mkdir -p "$root"
+ln -s missing "$root/broken"
+
+expected=$(printf '%s\n%s' \
+    'BROKEN: "broken" -> "missing"' \
+    'Found 1 broken symlink.')
+
+expect_result \
+    "single finding summary" \
+    1 \
+    "$expected" \
+    "$DOTDOC" "$root"
+
+# 26. Multiple findings summary
+
+root="$TMP_ROOT/summary-multiple"
+mkdir -p "$root"
+ln -s missing-b "$root/b"
+ln -s missing-a "$root/a"
+
+expected=$(printf '%s\n%s\n%s' \
+    'BROKEN: "a" -> "missing-a"' \
+    'BROKEN: "b" -> "missing-b"' \
+    'Found 2 broken symlinks.')
+
+expect_result \
+    "multiple findings summary" \
     1 \
     "$expected" \
     "$DOTDOC" "$root"

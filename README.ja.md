@@ -71,6 +71,7 @@ path順に並びます。各行にはscan rootからの相対pathと、symbolic 
 $ dotdoc ~/dotfiles
 BROKEN: "nvim/init.lua" -> "../missing/init.lua"
 BROKEN: "zshrc" -> "/home/example/does-not-exist/zshrc"
+Found 2 broken symlinks.
 ```
 
 findingsがない場合は次のようになります。
