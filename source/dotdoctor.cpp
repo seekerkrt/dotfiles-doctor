@@ -169,5 +169,10 @@ int main(int argc, char* argv[]) {
                   << '\n';
     }
 
+    std::cout << "Found " << findings.size()
+              << " broken symlink"
+              << (findings.size() == 1 ? "" : "s")
+              << ".\n";
+
     return kExitFindings;
 }

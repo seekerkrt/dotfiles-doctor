@@ -71,6 +71,7 @@ by the raw symbolic link target.
 $ dotdoc ~/dotfiles
 BROKEN: "nvim/init.lua" -> "../missing/init.lua"
 BROKEN: "zshrc" -> "/home/example/does-not-exist/zshrc"
+Found 2 broken symlinks.
 ```
 
 When nothing is found:
