@@ -33,7 +33,7 @@ int report_filesystem_error(const char* action,
     return kExitError;
 }
 
-int scan_diagnostic_findings(const fs::path& scan_root, std::vector<Finding>& findings) {
+int scan_diagnostic_findings(const fs::path& scan_root, const std::vector<fs::path>& exclude_paths, std::vector<Finding>& findings) {
     std::error_code ec;
     fs::recursive_directory_iterator it(scan_root, ec);
     fs::recursive_directory_iterator end;
@@ -43,6 +43,24 @@ int scan_diagnostic_findings(const fs::path& scan_root, std::vector<Finding>& fi
     }
 
     while(it != end) {
+        const auto current_path = it->path().lexically_normal();
+        bool is_excluded = false;
+        for(const auto& exclude : exclude_paths) {
+            if(current_path == exclude) {
+                is_excluded = true;
+                it.disable_recursion_pending();
+                break;
+            }
+        }
+
+        if(is_excluded) {
+            it.increment(ec);
+            if(ec) {
+                return report_filesystem_error("failed while traversing", scan_root, ec);
+            }
+            continue;
+        }
+
         const auto entry_status = it->symlink_status(ec);
         if(ec) {
             return report_filesystem_error("failed to inspect entry", it->path(), ec);
@@ -148,13 +166,37 @@ int main(int argc, char* argv[]) {
     // 引数解析後もscan rootが明示指定されていなければ、
     // "$HOME/dotfiles"をデフォルトとして使用する
     if(!scan_root_provided) {
+        // std::filesystem does not expand '~'.
         const char* home = std::getenv("HOME");
         if(home == nullptr || *home == '\0') {
             std::cerr << "Error: HOME environment variable is not set.\n";
             return kExitError;
         }
-        // std::filesystem does not expand '~'.
         scan_root = fs::path(home) / "dotfiles";
+    }
+
+    std::vector<fs::path> normalized_exclude_paths;
+    for(const auto& exclude : exclude_paths) {
+        // lexically_normal()を使うことで、相対パスの正規化を行い、重複や冗長なパス表現を排除する
+
+        // Exclude paths are interpreted relative to the scan root.
+        if(exclude.is_absolute()) {
+            std::cerr << "Error: Exclude path must be relative to scan root: " << exclude << '\n';
+            return kExitError;
+        }
+        // Normalize the exclude path before validating lexical traversal.
+        fs::path normalized_exclude = exclude.lexically_normal();
+
+        if(normalized_exclude.empty()) {
+            std::cerr << "Error: Exclude path is empty: " << exclude << '\n';
+            return kExitError;
+        }
+        if(normalized_exclude.begin()->string() == "..") {
+            std::cerr << "Error: Exclude path escapes scan root: " << exclude << '\n';
+            return kExitError;
+        }
+        // Normalize the exclude path relative to the scan root
+        normalized_exclude_paths.push_back(fs::path(scan_root / normalized_exclude).lexically_normal());
     }
 
     std::error_code ec;
@@ -176,7 +218,7 @@ int main(int argc, char* argv[]) {
 
     std::vector<Finding> findings;
 
-    const int scan_result = scan_diagnostic_findings(scan_root, findings);
+    const int scan_result = scan_diagnostic_findings(scan_root, normalized_exclude_paths, findings);
     if(scan_result != kExitClean) {
         return scan_result;
     }
