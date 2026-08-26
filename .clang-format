@@ -6,7 +6,8 @@ AlignAfterOpenBracket: true
 AlignConsecutiveAssignments: None
 AlignConsecutiveDeclarations: None
 AlignEscapedNewlines: Left
-AlignTrailingComments: Leave
+AlignTrailingComments:
+  Kind: Never
 
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: None
@@ -23,7 +24,7 @@ ColumnLimit: 0
 DerivePointerAlignment: false
 PointerAlignment: Left
 
-FixNamespaceComments: false
+FixNamespaceComments: true
 
 IncludeBlocks: Preserve
 SortIncludes:
@@ -42,7 +43,7 @@ NamespaceIndentation: None
 
 SpaceAfterCStyleCast: false
 SpaceBeforeParens: Never
-SpacesBeforeTrailingComments: 0
+SpacesBeforeTrailingComments: 1
 SpacesInCStyleCastParentheses: false
 SpacesInSquareBrackets: false
 SpacesInLineCommentPrefix:
