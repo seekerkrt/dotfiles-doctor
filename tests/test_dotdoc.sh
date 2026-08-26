@@ -597,6 +597,53 @@ expect_result \
     sh -c 'cd "$1" && exec "$2" --exclude cache tree' \
     sh "$relative_parent" "$dotdoc_absolute"
 
+# 39. Exclude option works after positional scan root
+
+expected=$(printf '%s\n%s\n%s' \
+    "BROKEN: \"keep-broken\" -> \"$target\"" \
+    "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
+    'Found 2 findings.')
+
+expect_result \
+    "exclude option works after positional scan root" \
+    1 \
+    "$expected" \
+    "$DOTDOC" "$root" --exclude cache
+
+# 40. Path normalized to current directory excludes entire scan root
+
+expect_result \
+    "normalized current-directory exclude excludes entire scan root" \
+    0 \
+    'OK: no findings.' \
+    "$DOTDOC" --exclude foo/.. "$root"
+
+# 41. Exclude works with relative scan root
+
+relative_parent="$TMP_ROOT/relative-parent"
+root="$relative_parent/tree"
+mkdir -p "$root/cache"
+
+target="$TMP_ROOT/relative-missing"
+ln -s "$target" "$root/keep-broken"
+ln -s "$target" "$root/cache/hidden-broken"
+
+dotdoc_dir=$(dirname "$DOTDOC")
+dotdoc_base=$(basename "$DOTDOC")
+dotdoc_absolute=$(cd "$dotdoc_dir" && pwd)/$dotdoc_base
+
+expected=$(printf '%s\n%s\n%s' \
+    "BROKEN: \"keep-broken\" -> \"$target\"" \
+    "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
+    'Found 2 findings.')
+
+expect_result \
+    "exclude works with relative scan root" \
+    1 \
+    "$expected" \
+    sh -c 'cd "$1" && exec "$2" --exclude cache tree' \
+    sh "$relative_parent" "$dotdoc_absolute"
+
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 
 if [ "$failed" -ne 0 ]; then
