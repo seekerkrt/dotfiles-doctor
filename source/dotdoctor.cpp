@@ -45,6 +45,7 @@ int scan_diagnostic_findings(const fs::path& scan_root, const std::vector<fs::pa
     while(it != end) {
         const auto current_path = it->path().lexically_normal();
         bool is_excluded = false;
+
         for(const auto& exclude : exclude_paths) {
             if(current_path == exclude) {
                 is_excluded = true;
@@ -132,6 +133,7 @@ int main(int argc, char* argv[]) {
     std::vector<fs::path> exclude_paths;
     fs::path scan_root;
     bool scan_root_provided = false;
+
     // Parse command-line arguments.
     for(std::size_t i = 0; i < args.size(); ++i) {
         const auto& arg = args[i];
@@ -175,7 +177,9 @@ int main(int argc, char* argv[]) {
         scan_root = fs::path(home) / "dotfiles";
     }
 
+    bool scan_root_excluded = false;
     std::vector<fs::path> normalized_exclude_paths;
+
     for(const auto& exclude : exclude_paths) {
         // lexically_normal()を使うことで、相対パスの正規化を行い、重複や冗長なパス表現を排除する
 
@@ -190,6 +194,12 @@ int main(int argc, char* argv[]) {
         if(normalized_exclude.empty()) {
             std::cerr << "Error: Exclude path is empty: " << exclude << '\n';
             return kExitError;
+        }
+        // A normalized "." excludes the entire scan root.
+        // Defer the actual skip until after scan-root validation.
+        if(normalized_exclude == fs::path(".")) {
+            scan_root_excluded = true;
+            continue;
         }
         if(normalized_exclude.begin()->string() == "..") {
             std::cerr << "Error: Exclude path escapes scan root: " << exclude << '\n';
@@ -217,8 +227,15 @@ int main(int argc, char* argv[]) {
     }
 
     std::vector<Finding> findings;
+    int scan_result = kExitClean;
 
-    const int scan_result = scan_diagnostic_findings(scan_root, normalized_exclude_paths, findings);
+    if(!scan_root_excluded) {
+        scan_result = scan_diagnostic_findings(
+            scan_root,
+            normalized_exclude_paths,
+            findings);
+    }
+
     if(scan_result != kExitClean) {
         return scan_result;
     }
