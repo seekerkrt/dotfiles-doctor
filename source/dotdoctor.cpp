@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -72,7 +73,7 @@ int scan_diagnostic_findings(const fs::path& scan_root, std::vector<Finding>& fi
                 findings.push_back({DiagnosticKind::kAbsolute, it->path(), raw_target});
             }
         }
-
+        // Note:
         // recursive_directory_iterator does not follow directory symlinks
         // unless follow_directory_symlink is explicitly requested.
         it.increment(ec);
@@ -110,31 +111,48 @@ void print_version() {
 
 int main(int argc, char* argv[]) {
     std::vector<std::string> args(argv + 1, argv + argc);
-
+    std::vector<fs::path> exclude_paths;
     fs::path scan_root;
-    if(args.size() >= 2) {
-        std::cerr << "Usage: dotdoc [OPTIONS] [PATH]\n";
-        return kExitError;
-    }
-    if(args.size() == 1) {
-        if(args[0] == "-h" || args[0] == "--help") {
+    bool scan_root_provided = false;
+    // Parse command-line arguments.
+    for(std::size_t i = 0; i < args.size(); ++i) {
+        const auto& arg = args[i];
+        if(arg == "-h" || arg == "--help") {
             print_help();
             return kExitClean;
-        }
-        if(args[0] == "--version") {
+        } else if(arg == "--version") {
             print_version();
             return kExitClean;
+        } else if(arg == "--exclude") {
+            // --excludeに続く引数を確認して、exclude_pathsに追加する
+            if(i + 1 < args.size()) {
+                exclude_paths.push_back(args[i + 1]);
+                ++i; // --excludeに続く引数を消費した
+                continue;
+            } else {
+                std::cerr << "Error: --exclude option requires a path argument.\n";
+                return kExitError;
+            }
+        } else if(scan_root_provided) {
+            // もう1個PATHを受け取ってる → これは2個目なのでエラー
+            std::cerr << "Error: Only one PATH argument is allowed.\n";
+            return kExitError;
+        } else {
+            // PATHをscan_rootとして記録した後も、後続optionを解析するためループを継続する
+            scan_root = arg;
+            scan_root_provided = true;
+            continue;
         }
-
-        // If a path is provided, use it as the scan root.
-        scan_root = args[0];
-    } else if(args.empty()) {
+    }
+    // Note: ループ終了後の判定。
+    // 引数解析後もscan rootが明示指定されていなければ、
+    // "$HOME/dotfiles"をデフォルトとして使用する
+    if(!scan_root_provided) {
         const char* home = std::getenv("HOME");
         if(home == nullptr || *home == '\0') {
             std::cerr << "Error: HOME environment variable is not set.\n";
             return kExitError;
         }
-
         // std::filesystem does not expand '~'.
         scan_root = fs::path(home) / "dotfiles";
     }
