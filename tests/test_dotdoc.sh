@@ -352,21 +352,28 @@ expect_stdout_contains \
     '--version' \
     "$DOTDOC" --help
 
-# 18. Help documents exit status
+# 18. Help lists exclude option
+
+expect_stdout_contains \
+    "--help lists exclude option" \
+    '--exclude PATH' \
+    "$DOTDOC" --help
+
+# 19. Help documents exit status
 
 expect_stdout_contains \
     "--help documents exit status" \
     'Exit status:' \
     "$DOTDOC" --help
 
-# 19. Help explains exit status 1
+# 20. Help explains exit status 1
 
 expect_stdout_contains \
     "--help explains exit status 1" \
     'Exit status 1 indicates diagnostic findings, not program failure.' \
     "$DOTDOC" --help
 
-# 20. Version
+# 21. Version
 
 expect_result \
     "--version" \
@@ -374,14 +381,14 @@ expect_result \
     "dotdoc $DOTDOC_VERSION" \
     "$DOTDOC" --version
 
-# 21. Help must not depend on HOME
+# 22. Help must not depend on HOME
 
 expect_stdout_contains \
     "--help works without HOME" \
     'Usage: dotdoc [OPTIONS] [PATH]' \
     env -u HOME "$DOTDOC" --help
 
-# 22. Version must not depend on HOME
+# 23. Version must not depend on HOME
 
 expect_result \
     "--version works without HOME" \
@@ -389,7 +396,7 @@ expect_result \
     "dotdoc $DOTDOC_VERSION" \
     env -u HOME "$DOTDOC" --version
 
-# 23. Self-referential symlink loop
+# 24. Self-referential symlink loop
 
 root="$TMP_ROOT/loop-self"
 mkdir -p "$root"
@@ -405,7 +412,7 @@ expect_result \
     "$expected" \
     "$DOTDOC" "$root"
 
-# 24. Mutual symlink loop
+# 25. Mutual symlink loop
 
 root="$TMP_ROOT/loop-mutual"
 mkdir -p "$root"
@@ -423,7 +430,7 @@ expect_result \
     "$expected" \
     "$DOTDOC" "$root"
 
-# 25. Single finding summary
+# 26. Single finding summary
 
 root="$TMP_ROOT/summary-single"
 mkdir -p "$root"
@@ -439,7 +446,7 @@ expect_result \
     "$expected" \
     "$DOTDOC" "$root"
 
-# 26. Multiple findings summary
+# 27. Multiple findings summary
 
 root="$TMP_ROOT/summary-multiple"
 mkdir -p "$root"
@@ -457,7 +464,7 @@ expect_result \
     "$expected" \
     "$DOTDOC" "$root"
 
-# 27. Exclude one symlink
+# 28. Exclude one symlink
 
 root="$TMP_ROOT/exclude"
 mkdir -p "$root/cache"
@@ -477,7 +484,7 @@ expect_result \
     "$expected" \
     "$DOTDOC" --exclude keep-broken "$root"
 
-# 28. Exclude directory subtree
+# 29. Exclude directory subtree
 
 expected=$(printf '%s\n%s\n%s' \
     "BROKEN: \"keep-broken\" -> \"$target\"" \
@@ -490,7 +497,7 @@ expect_result \
     "$expected" \
     "$DOTDOC" --exclude cache "$root"
 
-# 29. Repeatable exclude
+# 30. Repeatable exclude
 
 expect_result \
     "repeatable exclude" \
@@ -498,30 +505,28 @@ expect_result \
     'OK: no findings.' \
     "$DOTDOC" --exclude cache --exclude keep-broken "$root"
 
-
-# 30. Absolute exclude is rejected
+# 31. Absolute exclude is rejected
 
 expect_exit \
     "absolute exclude is rejected" \
     2 \
     "$DOTDOC" --exclude /etc "$root"
 
-
-# 31. Exclude path escaping scan root is rejected
+# 32. Exclude path escaping scan root is rejected
 
 expect_exit \
     "exclude path escaping scan root is rejected" \
     2 \
     "$DOTDOC" --exclude ../secret "$root"
 
-# 32. Normalized exclude path escaping scan root is rejected
+# 33. Normalized exclude path escaping scan root is rejected
 
 expect_exit \
     "normalized exclude path escaping scan root is rejected" \
     2 \
     "$DOTDOC" --exclude cache/../../secret "$root"
 
-# 33. Safe normalized exclude path
+# 34. Safe normalized exclude path
 
 expect_result \
     "safe normalized exclude path" \
@@ -529,7 +534,7 @@ expect_result \
     "$expected" \
     "$DOTDOC" --exclude cache/../cache "$root"
 
-# 34. Exclude entire scan root
+# 35. Exclude entire scan root
 
 expect_result \
     "exclude entire scan root" \
@@ -537,14 +542,14 @@ expect_result \
     'OK: no findings.' \
     "$DOTDOC" --exclude . "$root"
 
-# 35. Exclude requires path argument
+# 36. Exclude requires path argument
 
 expect_exit \
     "exclude requires path argument" \
     2 \
     "$DOTDOC" --exclude
 
-# 36. Nonexistent exclude is a no-op
+# 37. Nonexistent exclude is a no-op
 
 expected=$(printf '%s\n%s\n%s\n%s\n%s' \
     "BROKEN: \"cache/hidden-broken\" -> \"$target\"" \
@@ -559,14 +564,14 @@ expect_result \
     "$expected" \
     "$DOTDOC" --exclude nonexistent "$root"
 
-# 37. Empty exclude is rejected
+# 38. Empty exclude is rejected
 
 expect_exit \
     "empty exclude is rejected" \
     2 \
     "$DOTDOC" --exclude "" "$root"
 
-# 38. Exclude works with relative scan root
+# 39. Exclude works with relative scan root
 
 relative_parent="$TMP_ROOT/relative-parent"
 root="$relative_parent/tree"
@@ -591,7 +596,6 @@ expect_result \
     "$expected" \
     sh -c 'cd "$1" && exec "$2" --exclude cache tree' \
     sh "$relative_parent" "$dotdoc_absolute"
-
 
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 
