@@ -457,6 +457,48 @@ expect_result \
     "$expected" \
     "$DOTDOC" "$root"
 
+# 27. Exclude one symlink
+
+root="$TMP_ROOT/exclude"
+mkdir -p "$root/cache"
+
+target="$TMP_ROOT/exclude-missing"
+ln -s "$target" "$root/keep-broken"
+ln -s "$target" "$root/cache/hidden-broken"
+
+expected=$(printf '%s\n%s\n%s' \
+    "BROKEN: \"cache/hidden-broken\" -> \"$target\"" \
+    "ABSOLUTE: \"cache/hidden-broken\" -> \"$target\"" \
+    'Found 2 findings.')
+
+expect_result \
+    "exclude one symlink" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --exclude keep-broken "$root"
+
+# 28. Exclude directory subtree
+
+expected=$(printf '%s\n%s\n%s' \
+    "BROKEN: \"keep-broken\" -> \"$target\"" \
+    "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
+    'Found 2 findings.')
+
+expect_result \
+    "exclude directory subtree" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --exclude cache "$root"
+
+# 29. Repeatable exclude
+
+expect_result \
+    "repeatable exclude" \
+    0 \
+    'OK: no findings.' \
+    "$DOTDOC" --exclude cache --exclude keep-broken "$root"
+
+
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 
 if [ "$failed" -ne 0 ]; then
