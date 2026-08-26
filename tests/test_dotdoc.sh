@@ -352,21 +352,28 @@ expect_stdout_contains \
     '--version' \
     "$DOTDOC" --help
 
-# 18. Help documents exit status
+# 18. Help lists exclude option
+
+expect_stdout_contains \
+    "--help lists exclude option" \
+    '--exclude PATH' \
+    "$DOTDOC" --help
+
+# 19. Help documents exit status
 
 expect_stdout_contains \
     "--help documents exit status" \
     'Exit status:' \
     "$DOTDOC" --help
 
-# 19. Help explains exit status 1
+# 20. Help explains exit status 1
 
 expect_stdout_contains \
     "--help explains exit status 1" \
     'Exit status 1 indicates diagnostic findings, not program failure.' \
     "$DOTDOC" --help
 
-# 20. Version
+# 21. Version
 
 expect_result \
     "--version" \
@@ -374,14 +381,14 @@ expect_result \
     "dotdoc $DOTDOC_VERSION" \
     "$DOTDOC" --version
 
-# 21. Help must not depend on HOME
+# 22. Help must not depend on HOME
 
 expect_stdout_contains \
     "--help works without HOME" \
     'Usage: dotdoc [OPTIONS] [PATH]' \
     env -u HOME "$DOTDOC" --help
 
-# 22. Version must not depend on HOME
+# 23. Version must not depend on HOME
 
 expect_result \
     "--version works without HOME" \
@@ -389,7 +396,7 @@ expect_result \
     "dotdoc $DOTDOC_VERSION" \
     env -u HOME "$DOTDOC" --version
 
-# 23. Self-referential symlink loop
+# 24. Self-referential symlink loop
 
 root="$TMP_ROOT/loop-self"
 mkdir -p "$root"
@@ -405,7 +412,7 @@ expect_result \
     "$expected" \
     "$DOTDOC" "$root"
 
-# 24. Mutual symlink loop
+# 25. Mutual symlink loop
 
 root="$TMP_ROOT/loop-mutual"
 mkdir -p "$root"
@@ -423,7 +430,7 @@ expect_result \
     "$expected" \
     "$DOTDOC" "$root"
 
-# 25. Single finding summary
+# 26. Single finding summary
 
 root="$TMP_ROOT/summary-single"
 mkdir -p "$root"
@@ -439,7 +446,7 @@ expect_result \
     "$expected" \
     "$DOTDOC" "$root"
 
-# 26. Multiple findings summary
+# 27. Multiple findings summary
 
 root="$TMP_ROOT/summary-multiple"
 mkdir -p "$root"
@@ -456,6 +463,186 @@ expect_result \
     1 \
     "$expected" \
     "$DOTDOC" "$root"
+
+# 28. Exclude one symlink
+
+root="$TMP_ROOT/exclude"
+mkdir -p "$root/cache"
+
+target="$TMP_ROOT/exclude-missing"
+ln -s "$target" "$root/keep-broken"
+ln -s "$target" "$root/cache/hidden-broken"
+
+expected=$(printf '%s\n%s\n%s' \
+    "BROKEN: \"cache/hidden-broken\" -> \"$target\"" \
+    "ABSOLUTE: \"cache/hidden-broken\" -> \"$target\"" \
+    'Found 2 findings.')
+
+expect_result \
+    "exclude one symlink" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --exclude keep-broken "$root"
+
+# 29. Exclude directory subtree
+
+expected=$(printf '%s\n%s\n%s' \
+    "BROKEN: \"keep-broken\" -> \"$target\"" \
+    "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
+    'Found 2 findings.')
+
+expect_result \
+    "exclude directory subtree" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --exclude cache "$root"
+
+# 30. Repeatable exclude
+
+expect_result \
+    "repeatable exclude" \
+    0 \
+    'OK: no findings.' \
+    "$DOTDOC" --exclude cache --exclude keep-broken "$root"
+
+# 31. Absolute exclude is rejected
+
+expect_exit \
+    "absolute exclude is rejected" \
+    2 \
+    "$DOTDOC" --exclude /etc "$root"
+
+# 32. Exclude path escaping scan root is rejected
+
+expect_exit \
+    "exclude path escaping scan root is rejected" \
+    2 \
+    "$DOTDOC" --exclude ../secret "$root"
+
+# 33. Normalized exclude path escaping scan root is rejected
+
+expect_exit \
+    "normalized exclude path escaping scan root is rejected" \
+    2 \
+    "$DOTDOC" --exclude cache/../../secret "$root"
+
+# 34. Safe normalized exclude path
+
+expect_result \
+    "safe normalized exclude path" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --exclude cache/../cache "$root"
+
+# 35. Exclude entire scan root
+
+expect_result \
+    "exclude entire scan root" \
+    0 \
+    'OK: no findings.' \
+    "$DOTDOC" --exclude . "$root"
+
+# 36. Exclude requires path argument
+
+expect_exit \
+    "exclude requires path argument" \
+    2 \
+    "$DOTDOC" --exclude
+
+# 37. Nonexistent exclude is a no-op
+
+expected=$(printf '%s\n%s\n%s\n%s\n%s' \
+    "BROKEN: \"cache/hidden-broken\" -> \"$target\"" \
+    "ABSOLUTE: \"cache/hidden-broken\" -> \"$target\"" \
+    "BROKEN: \"keep-broken\" -> \"$target\"" \
+    "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
+    'Found 4 findings.')
+
+expect_result \
+    "nonexistent exclude is a no-op" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --exclude nonexistent "$root"
+
+# 38. Empty exclude is rejected
+
+expect_exit \
+    "empty exclude is rejected" \
+    2 \
+    "$DOTDOC" --exclude "" "$root"
+
+# 39. Exclude works with relative scan root
+
+relative_parent="$TMP_ROOT/relative-parent"
+root="$relative_parent/tree"
+mkdir -p "$root/cache"
+
+target="$TMP_ROOT/relative-missing"
+ln -s "$target" "$root/keep-broken"
+ln -s "$target" "$root/cache/hidden-broken"
+
+dotdoc_dir=$(dirname "$DOTDOC")
+dotdoc_base=$(basename "$DOTDOC")
+dotdoc_absolute=$(cd "$dotdoc_dir" && pwd)/$dotdoc_base
+
+expected=$(printf '%s\n%s\n%s' \
+    "BROKEN: \"keep-broken\" -> \"$target\"" \
+    "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
+    'Found 2 findings.')
+
+expect_result \
+    "exclude works with relative scan root" \
+    1 \
+    "$expected" \
+    sh -c 'cd "$1" && exec "$2" --exclude cache tree' \
+    sh "$relative_parent" "$dotdoc_absolute"
+
+# 39. Exclude option works after positional scan root
+
+expected=$(printf '%s\n%s\n%s' \
+    "BROKEN: \"keep-broken\" -> \"$target\"" \
+    "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
+    'Found 2 findings.')
+
+expect_result \
+    "exclude option works after positional scan root" \
+    1 \
+    "$expected" \
+    "$DOTDOC" "$root" --exclude cache
+
+# 40. Path normalized to current directory excludes entire scan root
+
+expect_result \
+    "normalized current-directory exclude excludes entire scan root" \
+    0 \
+    'OK: no findings.' \
+    "$DOTDOC" --exclude foo/.. "$root"
+
+# 41. Exclude works with relative scan root
+
+relative_parent="$TMP_ROOT/relative-parent"
+root="$relative_parent/tree"
+mkdir -p "$root/cache"
+
+target="$TMP_ROOT/relative-missing"
+ln -s "$target" "$root/keep-broken"
+ln -s "$target" "$root/cache/hidden-broken"
+
+dotdoc_dir=$(dirname "$DOTDOC")
+dotdoc_base=$(basename "$DOTDOC")
+dotdoc_absolute=$(cd "$dotdoc_dir" && pwd)/$dotdoc_base
+
+expected=$(printf '%s\n%s\n%s' \
+    "BROKEN: \"keep-broken\" -> \"$target\"" \
+    "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
+    'Found 2 findings.')
+
+expect_result \
+    "exclude works with relative scan root" \
+    1 \
+    "$expected" \
+    sh -c 'cd "$1" && exec "$2" --exclude cache tree' \
+    sh "$relative_parent" "$dotdoc_absolute"
 
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 

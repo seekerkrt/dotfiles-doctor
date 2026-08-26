@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -32,7 +33,7 @@ int report_filesystem_error(const char* action,
     return kExitError;
 }
 
-int scan_diagnostic_findings(const fs::path& scan_root, std::vector<Finding>& findings) {
+int scan_diagnostic_findings(const fs::path& scan_root, const std::vector<fs::path>& exclude_paths, std::vector<Finding>& findings) {
     std::error_code ec;
     fs::recursive_directory_iterator it(scan_root, ec);
     fs::recursive_directory_iterator end;
@@ -42,6 +43,25 @@ int scan_diagnostic_findings(const fs::path& scan_root, std::vector<Finding>& fi
     }
 
     while(it != end) {
+        const auto current_path = it->path().lexically_normal();
+        bool is_excluded = false;
+
+        for(const auto& exclude : exclude_paths) {
+            if(current_path == exclude) {
+                is_excluded = true;
+                it.disable_recursion_pending();
+                break;
+            }
+        }
+
+        if(is_excluded) {
+            it.increment(ec);
+            if(ec) {
+                return report_filesystem_error("failed while traversing", scan_root, ec);
+            }
+            continue;
+        }
+
         const auto entry_status = it->symlink_status(ec);
         if(ec) {
             return report_filesystem_error("failed to inspect entry", it->path(), ec);
@@ -72,7 +92,7 @@ int scan_diagnostic_findings(const fs::path& scan_root, std::vector<Finding>& fi
                 findings.push_back({DiagnosticKind::kAbsolute, it->path(), raw_target});
             }
         }
-
+        // Note:
         // recursive_directory_iterator does not follow directory symlinks
         // unless follow_directory_symlink is explicitly requested.
         it.increment(ec);
@@ -93,8 +113,9 @@ void print_help() {
               << "With PATH, the specified directory tree is scanned.\n"
               << "\n"
               << "Options:\n"
-              << "  -h, --help    Show this help and exit\n"
-              << "  --version     Show version information and exit\n"
+              << "  --exclude PATH  Exclude PATH relative to the scan root; may be repeated\n"
+              << "  -h, --help      Show this help and exit\n"
+              << "  --version       Show version information and exit\n"
               << "\n"
               << "Exit status:\n"
               << "  0  Scan completed with no findings\n"
@@ -110,33 +131,83 @@ void print_version() {
 
 int main(int argc, char* argv[]) {
     std::vector<std::string> args(argv + 1, argv + argc);
-
+    std::vector<fs::path> exclude_paths;
     fs::path scan_root;
-    if(args.size() >= 2) {
-        std::cerr << "Usage: dotdoc [OPTIONS] [PATH]\n";
-        return kExitError;
-    }
-    if(args.size() == 1) {
-        if(args[0] == "-h" || args[0] == "--help") {
+    bool scan_root_provided = false;
+
+    // Parse command-line arguments.
+    for(std::size_t i = 0; i < args.size(); ++i) {
+        const auto& arg = args[i];
+        if(arg == "-h" || arg == "--help") {
             print_help();
             return kExitClean;
-        }
-        if(args[0] == "--version") {
+        } else if(arg == "--version") {
             print_version();
             return kExitClean;
+        } else if(arg == "--exclude") {
+            // --excludeに続く引数を確認して、exclude_pathsに追加する
+            if(i + 1 < args.size()) {
+                exclude_paths.push_back(args[i + 1]);
+                ++i; // --excludeに続く引数を消費した
+                continue;
+            } else {
+                std::cerr << "Error: --exclude option requires a path argument.\n";
+                return kExitError;
+            }
+        } else if(scan_root_provided) {
+            // もう1個PATHを受け取ってる → これは2個目なのでエラー
+            std::cerr << "Error: Only one PATH argument is allowed.\n";
+            return kExitError;
+        } else {
+            // PATHをscan_rootとして記録した後も、後続optionを解析するためループを継続する
+            scan_root = arg;
+            scan_root_provided = true;
+            continue;
         }
-
-        // If a path is provided, use it as the scan root.
-        scan_root = args[0];
-    } else if(args.empty()) {
+    }
+    // Note: ループ終了後の判定。
+    // 引数解析後もscan rootが明示指定されていなければ、
+    // "$HOME/dotfiles"をデフォルトとして使用する
+    if(!scan_root_provided) {
+        // std::filesystem does not expand '~'.
         const char* home = std::getenv("HOME");
         if(home == nullptr || *home == '\0') {
             std::cerr << "Error: HOME environment variable is not set.\n";
             return kExitError;
         }
-
-        // std::filesystem does not expand '~'.
         scan_root = fs::path(home) / "dotfiles";
+    }
+
+    bool scan_root_excluded = false;
+    std::vector<fs::path> normalized_exclude_paths;
+
+    for(const auto& exclude : exclude_paths) {
+        // lexically_normal()を使うことで、相対パスの正規化を行い、重複や冗長なパス表現を排除する
+
+        // Exclude paths are interpreted relative to the scan root.
+        if(exclude.is_absolute()) {
+            std::cerr << "Error: Exclude path must be relative to scan root: " << exclude << '\n';
+            return kExitError;
+        }
+        // Normalize the exclude path before validating lexical traversal.
+        fs::path normalized_exclude = exclude.lexically_normal();
+
+        if(normalized_exclude.empty()) {
+            std::cerr << "Error: Exclude path is empty: " << exclude << '\n';
+            return kExitError;
+        }
+        // A normalized "." excludes the entire scan root.
+        // Defer the actual skip until after scan-root validation.
+        if(normalized_exclude == fs::path(".")) {
+            scan_root_excluded = true;
+            continue;
+        }
+        if(normalized_exclude.begin()->string() == "..") {
+            std::cerr << "Error: Exclude path escapes scan root: " << exclude << '\n';
+            return kExitError;
+        }
+        // Normalize the exclude path relative to the scan root
+        normalized_exclude_paths.push_back(fs::path(scan_root / normalized_exclude).lexically_normal());
     }
 
     std::error_code ec;
@@ -157,8 +228,15 @@ int main(int argc, char* argv[]) {
     }
 
     std::vector<Finding> findings;
+    int scan_result = kExitClean;
 
-    const int scan_result = scan_diagnostic_findings(scan_root, findings);
+    if(!scan_root_excluded) {
+        scan_result = scan_diagnostic_findings(
+            scan_root,
+            normalized_exclude_paths,
+            findings);
+    }
+
     if(scan_result != kExitClean) {
         return scan_result;
     }

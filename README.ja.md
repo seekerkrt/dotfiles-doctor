@@ -31,6 +31,7 @@ Early development（初期開発段階）です。このsource treeが返すvers
 
 - broken symbolic linkの検出
 - absolute symbolic linkの検出
+- `--exclude PATH`
 - `-h` / `--help`
 - `--version`
 
@@ -44,6 +45,7 @@ dotdoc [OPTIONS] [PATH]
 
 - `dotdoc` — `$HOME/dotfiles`を走査する
 - `dotdoc PATH` — 指定したdirectory treeを走査する
+- `dotdoc --exclude PATH` — scan rootからの相対`PATH`を除外する。複数回指定できる
 - `dotdoc -h`、`dotdoc --help` — usageを表示して終了する
 - `dotdoc --version` — version情報を表示して終了する
 
@@ -58,6 +60,15 @@ dotdoc
 ```sh
 dotdoc "$HOME"
 ```
+
+既知のnoiseとなるsubtreeは`--exclude`で除外できます。
+
+```sh
+dotdoc --exclude .local/share/Steam --exclude .cache "$HOME"
+```
+
+`--exclude`の`PATH`はscan root基準のliteral pathであり、glob、正規表現、
+ignore fileの規則ではありません。
 
 `--help`と`--version`は`$HOME`やscan rootの確認より先に処理されるため、
 どちらも利用できない状態でも動作します。
@@ -99,6 +110,17 @@ invocation errorとfilesystem errorは標準エラー出力へ書き出されま
 - scanは再帰的に行います。
 - `PATH`を省略した場合、scan rootは従来どおり`$HOME/dotfiles`です。
 - `PATH`を指定した場合、そのdirectoryをscan rootとして使用します。
+- `--exclude PATH`はscan root基準の相対pathとして解釈し、複数回指定できます。
+  除外したdirectoryは走査時点でsubtreeごとpruneします。除外したfileまたは
+  symbolic linkはexact matchでskipします。
+- 除外判定はlexical normalization後のliteral path一致です。globや正規表現では
+  なく、canonicalizeせず、symbolic linkのtargetをfollowして判定することも
+  ありません。
+- `--exclude .`、およびlexical normalizationの結果`.`になる指定は、scan root
+  全体を除外します。存在しないexclude pathは無視されます。空のexclude path、
+  絶対path、またはscan root外へescapeするexclude pathはinvocation errorとなり、
+  終了コードは`2`です。
+- `--exclude`は`BROKEN`と`ABSOLUTE`の両方の診断に共通して適用されます。
 - symbolic linkはsymbolic link自身として検査します。directory symbolic linkは
   それ自体を検査しますが、その先のtree（target tree）は辿りません。
 - diagnosticはfilesystemの状態に基づいて行い、GNU Stow固有のdirectory構造を
@@ -110,6 +132,8 @@ invocation errorとfilesystem errorは標準エラー出力へ書き出されま
 場合があります。runtime環境、container、WineやProton、Electron application
 などは、一時的、環境依存、または意図的に解決できないsymbolic linkを生成する
 ことがあります。それらもfilesystem上のfindingとして正しく報告されます。
+既知のnoiseとなるsubtreeは`--exclude`で除外でき、残りのfindingsの判定は
+変わりません。
 
 ## Build
 
