@@ -30,6 +30,7 @@ Available today:
 
 - Broken symbolic link detection
 - Absolute symbolic link detection
+- `--exclude PATH`
 - `-h` / `--help`
 - `--version`
 
@@ -44,6 +45,7 @@ dotdoc [OPTIONS] [PATH]
 
 - `dotdoc` — scan `$HOME/dotfiles`
 - `dotdoc PATH` — scan the specified directory tree
+- `dotdoc --exclude PATH` — exclude `PATH` relative to the scan root; may be repeated
 - `dotdoc -h`, `dotdoc --help` — show usage and exit
 - `dotdoc --version` — show version information and exit
 
@@ -58,6 +60,15 @@ An explicitly selected directory tree can be scanned with:
 ```sh
 dotdoc "$HOME"
 ```
+
+Known-noise subtrees can be skipped with `--exclude`:
+
+```sh
+dotdoc --exclude .local/share/Steam --exclude .cache "$HOME"
+```
+
+`--exclude PATH` is a scan-root-relative literal path, not a glob, regular
+expression, or ignore-file rule.
 
 `--help` and `--version` are handled before `$HOME` and the scan root are
 inspected, so they work even when neither is usable.
@@ -99,6 +110,20 @@ means `dotdoc` itself could not do its job.
 - The scan is recursive.
 - Without `PATH`, the scan root remains `$HOME/dotfiles`.
 - With `PATH`, the specified directory is used as the scan root.
+- `--exclude PATH` is interpreted relative to the scan root and may be
+  repeated. An excluded directory is pruned during traversal, so its
+  subtree is not scanned. An excluded file or symbolic link is skipped on
+  exact match.
+- Exclude matching is literal after lexical normalization. It is not glob
+  or regular-expression matching, the path is not canonicalized, and
+  symbolic-link targets are not followed when deciding whether a path is
+  excluded.
+- `--exclude .`, or a path that lexically normalizes to `.`, excludes the
+  entire scan root. A nonexistent exclude path is ignored. An empty
+  exclude path, an absolute exclude path, or an exclude path that
+  lexically escapes the scan root is an invocation error and exits with
+  status `2`.
+- `--exclude` applies to both `BROKEN` and `ABSOLUTE` findings.
 - Symbolic links are inspected as symbolic links. A directory symbolic link
   is checked itself, but the tree behind it is not traversed.
 - Diagnostics are based on filesystem state and do not require a GNU Stow
@@ -110,7 +135,8 @@ Scanning a broad directory tree such as `$HOME` or `/` can produce a large
 number of findings. Runtime environments, containers, Wine or Proton,
 Electron applications, and similar software may create temporary,
 environment-specific, or intentionally unresolved symbolic links that are
-still correctly reported as filesystem findings.
+still correctly reported as filesystem findings. Use `--exclude` to skip
+known-noise subtrees without changing how remaining findings are judged.
 
 ## Build
 

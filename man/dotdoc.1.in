@@ -25,7 +25,48 @@ the specified directory tree is scanned.
 
 Directory symbolic links are inspected as symbolic links but their target
 directories are not traversed.
+.PP
+.B \-\-exclude
+omits matching scan-root-relative entries from the scan and applies to
+both broken and absolute symbolic-link findings.
 .SH OPTIONS
+.TP
+.BI \-\-exclude " PATH"
+Exclude
+.I PATH
+relative to the scan root.
+This option may be repeated.
+.IP
+.I PATH
+is matched as a literal path after lexical normalization.
+It is not a glob, regular expression, or ignore-file rule.
+The path is not canonicalized, and symbolic-link targets are not followed
+when deciding whether an entry is excluded.
+.IP
+If
+.I PATH
+names a directory, that directory and its subtree are pruned during
+traversal.
+If
+.I PATH
+names a file or symbolic link, that entry is skipped on exact match.
+.B \-\-exclude .\&
+and any
+.I PATH
+that lexically normalizes to
+.B .\&
+exclude the entire scan root.
+.IP
+A nonexistent exclude path is ignored.
+An empty
+.IR PATH ,
+an absolute
+.IR PATH ,
+or a
+.I PATH
+that lexically escapes the scan root is an invocation error and causes
+.B dotdoc
+to exit with status 2.
 .TP
 .BR \-h ", " \-\-help
 Show help information and exit.
@@ -47,6 +88,9 @@ This does not indicate program failure.
 .TP
 .B 2
 An invocation, filesystem, or scan error occurred.
+Invalid
+.B \-\-exclude
+usage is an invocation error.
 .SH EXAMPLES
 Scan the default dotfiles tree:
 .PP
@@ -61,6 +105,14 @@ Scan a specific directory:
 .nf
 .RS
 dotdoc ~/dotfiles
+.RE
+.fi
+.PP
+Skip known-noise subtrees under a broad scan root:
+.PP
+.nf
+.RS
+dotdoc --exclude .local/share/Steam --exclude .cache "$HOME"
 .RE
 .fi
 .PP
