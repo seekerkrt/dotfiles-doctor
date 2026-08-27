@@ -11,13 +11,15 @@
 
 namespace fs = std::filesystem;
 
+namespace {
+
 constexpr int kExitClean = 0;
 constexpr int kExitFindings = 1;
 constexpr int kExitError = 2;
 
 enum class DiagnosticKind {
-    kAbsolute, // symlink target is absolute
-    kBroken, // symlink target is broken
+    kAbsolute,
+    kBroken,
 };
 
 struct Finding {
@@ -26,148 +28,60 @@ struct Finding {
     fs::path raw_target;
 };
 
-int report_filesystem_error(const char* action,
-                            const fs::path& path,
-                            const std::error_code& ec) {
-    std::cerr << "Error: " << action << ": " << path << ": " << ec.message() << '\n';
-    return kExitError;
-}
+int report_filesystem_error(
+    const char* action,
+    const fs::path& path,
+    const std::error_code& ec);
 
-int scan_diagnostic_findings(const fs::path& scan_root, const std::vector<fs::path>& exclude_paths, std::vector<Finding>& findings) {
-    std::error_code ec;
-    fs::recursive_directory_iterator it(scan_root, ec);
-    fs::recursive_directory_iterator end;
+int scan_diagnostic_findings(
+    const fs::path& scan_root,
+    const std::vector<fs::path>& exclude_paths,
+    std::vector<Finding>& findings);
 
-    if(ec) {
-        return report_filesystem_error("failed to open scan root", scan_root, ec);
-    }
+void print_help();
+void print_version();
 
-    while(it != end) {
-        const auto current_path = it->path().lexically_normal();
-        bool is_excluded = false;
-
-        for(const auto& exclude : exclude_paths) {
-            if(current_path == exclude) {
-                is_excluded = true;
-                it.disable_recursion_pending();
-                break;
-            }
-        }
-
-        if(is_excluded) {
-            it.increment(ec);
-            if(ec) {
-                return report_filesystem_error("failed while traversing", scan_root, ec);
-            }
-            continue;
-        }
-
-        const auto entry_status = it->symlink_status(ec);
-        if(ec) {
-            return report_filesystem_error("failed to inspect entry", it->path(), ec);
-        }
-
-        if(fs::is_symlink(entry_status)) {
-            std::error_code status_ec;
-            const auto target_status = it->status(status_ec);
-
-            std::error_code read_ec;
-            const auto raw_target = fs::read_symlink(it->path(), read_ec);
-
-            const bool is_broken = target_status.type() == fs::file_type::not_found || status_ec == std::errc::too_many_symbolic_link_levels;
-
-            if(!is_broken && status_ec) {
-                return report_filesystem_error("failed to inspect symlink target", it->path(), status_ec);
-            }
-
-            if(read_ec) {
-                return report_filesystem_error("failed to read symlink", it->path(), read_ec);
-            }
-
-            if(is_broken) {
-                findings.push_back({DiagnosticKind::kBroken, it->path(), raw_target});
-            }
-
-            if(raw_target.is_absolute()) {
-                findings.push_back({DiagnosticKind::kAbsolute, it->path(), raw_target});
-            }
-        }
-        // Note:
-        // recursive_directory_iterator does not follow directory symlinks
-        // unless follow_directory_symlink is explicitly requested.
-        it.increment(ec);
-        if(ec) {
-            return report_filesystem_error("failed while traversing", scan_root, ec);
-        }
-    }
-
-    return kExitClean;
-}
-
-void print_help() {
-    std::cout << "Usage: dotdoc [OPTIONS] [PATH]\n"
-              << "\n"
-              << "Scan a directory tree for symbolic-link findings.\n"
-              << "\n"
-              << "Without PATH, $HOME/dotfiles is scanned.\n"
-              << "With PATH, the specified directory tree is scanned.\n"
-              << "\n"
-              << "Options:\n"
-              << "  --exclude PATH  Exclude PATH relative to the scan root; may be repeated\n"
-              << "  -h, --help      Show this help and exit\n"
-              << "  --version       Show version information and exit\n"
-              << "\n"
-              << "Exit status:\n"
-              << "  0  Scan completed with no findings\n"
-              << "  1  Scan completed with findings\n"
-              << "  2  Invocation or filesystem error\n"
-              << "\n"
-              << "Exit status 1 indicates diagnostic findings, not program failure.\n";
-}
-
-void print_version() {
-    std::cout << "dotdoc " << DOTDOC_VERSION << '\n';
-}
+} // namespace
 
 int main(int argc, char* argv[]) {
-    std::vector<std::string> args(argv + 1, argv + argc);
+    const std::vector<std::string> args(argv + 1, argv + argc);
     std::vector<fs::path> exclude_paths;
     fs::path scan_root;
     bool scan_root_provided = false;
 
-    // Parse command-line arguments.
     for(std::size_t i = 0; i < args.size(); ++i) {
         const auto& arg = args[i];
+
         if(arg == "-h" || arg == "--help") {
             print_help();
             return kExitClean;
-        } else if(arg == "--version") {
+        }
+
+        if(arg == "--version") {
             print_version();
             return kExitClean;
-        } else if(arg == "--exclude") {
-            // --excludeに続く引数を確認して、exclude_pathsに追加する
-            if(i + 1 < args.size()) {
-                exclude_paths.push_back(args[i + 1]);
-                ++i; // --excludeに続く引数を消費した
-                continue;
-            } else {
+        }
+
+        if(arg == "--exclude") {
+            if(i + 1 >= args.size()) {
                 std::cerr << "Error: --exclude option requires a path argument.\n";
                 return kExitError;
             }
-        } else if(scan_root_provided) {
-            // もう1個PATHを受け取ってる → これは2個目なのでエラー
-            std::cerr << "Error: Only one PATH argument is allowed.\n";
-            return kExitError;
-        } else {
-            // PATHをscan_rootとして記録した後も、後続optionを解析するためループを継続する
-            scan_root = arg;
-            scan_root_provided = true;
+
+            exclude_paths.push_back(args[i + 1]);
+            ++i;
             continue;
         }
+
+        if(scan_root_provided) {
+            std::cerr << "Error: Only one PATH argument is allowed.\n";
+            return kExitError;
+        }
+
+        scan_root = arg;
+        scan_root_provided = true;
     }
-    // Note: ループ終了後の判定。
-    // 引数解析後もscan rootが明示指定されていなければ、
-    // "$HOME/dotfiles"をデフォルトとして使用する
+
     if(!scan_root_provided) {
         // std::filesystem does not expand '~'.
         const char* home = std::getenv("HOME");
@@ -181,23 +95,20 @@ int main(int argc, char* argv[]) {
     bool scan_root_excluded = false;
     std::vector<fs::path> normalized_exclude_paths;
 
+    // Exclude paths are interpreted lexically relative to the scan root.
     for(const auto& exclude : exclude_paths) {
-        // lexically_normal()を使うことで、相対パスの正規化を行い、重複や冗長なパス表現を排除する
-
-        // Exclude paths are interpreted relative to the scan root.
         if(exclude.is_absolute()) {
             std::cerr << "Error: Exclude path must be relative to scan root: " << exclude << '\n';
             return kExitError;
         }
-        // Normalize the exclude path before validating lexical traversal.
-        fs::path normalized_exclude = exclude.lexically_normal();
+
+        const auto normalized_exclude = exclude.lexically_normal();
 
         if(normalized_exclude.empty()) {
             std::cerr << "Error: Exclude path is empty: " << exclude << '\n';
             return kExitError;
         }
-        // A normalized "." excludes the entire scan root.
-        // Defer the actual skip until after scan-root validation.
+        // "." excludes the scan root itself, but the root is still validated first.
         if(normalized_exclude == fs::path(".")) {
             scan_root_excluded = true;
             continue;
@@ -206,7 +117,7 @@ int main(int argc, char* argv[]) {
             std::cerr << "Error: Exclude path escapes scan root: " << exclude << '\n';
             return kExitError;
         }
-        // Normalize the exclude path relative to the scan root
+
         normalized_exclude_paths.push_back(fs::path(scan_root / normalized_exclude).lexically_normal());
     }
 
@@ -271,3 +182,109 @@ int main(int argc, char* argv[]) {
 
     return kExitFindings;
 }
+
+namespace {
+
+int report_filesystem_error(const char* action,
+                            const fs::path& path,
+                            const std::error_code& ec) {
+    std::cerr << "Error: " << action << ": " << path << ": " << ec.message() << '\n';
+    return kExitError;
+}
+
+int scan_diagnostic_findings(const fs::path& scan_root, const std::vector<fs::path>& exclude_paths, std::vector<Finding>& findings) {
+    std::error_code ec;
+    // Default iterator options intentionally do not follow directory symlinks.
+    fs::recursive_directory_iterator it(scan_root, ec);
+    fs::recursive_directory_iterator end;
+
+    if(ec) {
+        return report_filesystem_error("failed to open scan root", scan_root, ec);
+    }
+
+    while(it != end) {
+        const auto current_path = it->path().lexically_normal();
+        bool is_excluded = false;
+
+        for(const auto& exclude : exclude_paths) {
+            if(current_path == exclude) {
+                is_excluded = true;
+                it.disable_recursion_pending();
+                break;
+            }
+        }
+
+        if(is_excluded) {
+            it.increment(ec);
+            if(ec) {
+                return report_filesystem_error("failed while traversing", scan_root, ec);
+            }
+            continue;
+        }
+
+        const auto entry_status = it->symlink_status(ec);
+        if(ec) {
+            return report_filesystem_error("failed to inspect entry", it->path(), ec);
+        }
+
+        if(fs::is_symlink(entry_status)) {
+            std::error_code status_ec;
+            const auto target_status = it->status(status_ec);
+
+            std::error_code read_ec;
+            const auto raw_target = fs::read_symlink(it->path(), read_ec);
+
+            const bool is_broken = target_status.type() == fs::file_type::not_found || status_ec == std::errc::too_many_symbolic_link_levels;
+
+            if(!is_broken && status_ec) {
+                return report_filesystem_error("failed to inspect symlink target", it->path(), status_ec);
+            }
+
+            if(read_ec) {
+                return report_filesystem_error("failed to read symlink", it->path(), read_ec);
+            }
+
+            if(is_broken) {
+                findings.push_back({DiagnosticKind::kBroken, it->path(), raw_target});
+            }
+
+            if(raw_target.is_absolute()) {
+                findings.push_back({DiagnosticKind::kAbsolute, it->path(), raw_target});
+            }
+        }
+
+        it.increment(ec);
+        if(ec) {
+            return report_filesystem_error("failed while traversing", scan_root, ec);
+        }
+    }
+
+    return kExitClean;
+}
+
+void print_help() {
+    std::cout << "Usage: dotdoc [OPTIONS] [PATH]\n"
+              << "\n"
+              << "Scan a directory tree for symbolic-link findings.\n"
+              << "\n"
+              << "Without PATH, $HOME/dotfiles is scanned.\n"
+              << "With PATH, the specified directory tree is scanned.\n"
+              << "\n"
+              << "Options:\n"
+              << "  --exclude PATH  Exclude PATH relative to the scan root; may be repeated\n"
+              << "  -h, --help      Show this help and exit\n"
+              << "  --version       Show version information and exit\n"
+              << "\n"
+              << "Exit status:\n"
+              << "  0  Scan completed with no findings\n"
+              << "  1  Scan completed with findings\n"
+              << "  2  Invocation or filesystem error\n"
+              << "\n"
+              << "Exit status 1 indicates diagnostic findings, not program failure.\n";
+}
+
+void print_version() {
+    std::cout << "dotdoc " << DOTDOC_VERSION << '\n';
+}
+
+} // namespace
