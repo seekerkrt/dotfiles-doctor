@@ -51,13 +51,18 @@ int main(int argc, char* argv[]) {
 
     for(std::size_t i = 0; i < args.size(); ++i) {
         const auto& arg = args[i];
+
         if(arg == "-h" || arg == "--help") {
             print_help();
             return kExitClean;
-        } else if(arg == "--version") {
+        }
+
+        if(arg == "--version") {
             print_version();
             return kExitClean;
-        } else if(arg == "--exclude") {
+        }
+
+        if(arg == "--exclude") {
             if(i + 1 >= args.size()) {
                 std::cerr << "Error: --exclude option requires a path argument.\n";
                 return kExitError;
@@ -66,14 +71,15 @@ int main(int argc, char* argv[]) {
             exclude_paths.push_back(args[i + 1]);
             ++i;
             continue;
-        } else if(scan_root_provided) {
+        }
+
+        if(scan_root_provided) {
             std::cerr << "Error: Only one PATH argument is allowed.\n";
             return kExitError;
-        } else {
-            scan_root = arg;
-            scan_root_provided = true;
-            continue;
         }
+
+        scan_root = arg;
+        scan_root_provided = true;
     }
 
     if(!scan_root_provided) {
