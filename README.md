@@ -24,7 +24,7 @@ In short, Dotfiles Doctor is **dotfiles-first, but not dotfiles-only**.
 
 ## Status
 
-Early development. This source tree reports version `0.1.0`.
+Early development. This source tree reports version `0.2.0`.
 
 Available today:
 
