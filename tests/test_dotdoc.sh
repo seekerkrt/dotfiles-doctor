@@ -359,6 +359,13 @@ expect_stdout_contains \
     '--exclude PATH' \
     "$DOTDOC" --help
 
+# 18a. Help lists max-depth option
+
+expect_stdout_contains \
+    "--help lists max-depth option" \
+    '--max-depth N' \
+    "$DOTDOC" --help
+
 # 19. Help documents exit status
 
 expect_stdout_contains \

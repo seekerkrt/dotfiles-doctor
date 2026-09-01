@@ -318,6 +318,7 @@ void print_help() {
               << "\n"
               << "Options:\n"
               << "  --exclude PATH  Exclude PATH relative to the scan root; may be repeated\n"
+              << "  --max-depth N   Scan through depth N; scan root is depth 0; may be repeated\n"
               << "  -h, --help      Show this help and exit\n"
               << "  --version       Show version information and exit\n"
               << "\n"

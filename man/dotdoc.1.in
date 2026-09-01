@@ -29,6 +29,10 @@ directories are not traversed.
 .B \-\-exclude
 omits matching scan-root-relative entries from the scan and applies to
 both broken and absolute symbolic-link findings.
+.PP
+.B \-\-max\-depth
+limits how deep the scan descends.
+The scan root is depth 0, and a direct entry is depth 1.
 .SH OPTIONS
 .TP
 .BI \-\-exclude " PATH"
@@ -68,6 +72,31 @@ that lexically escapes the scan root is an invocation error and causes
 .B dotdoc
 to exit with status 2.
 .TP
+.BI \-\-max\-depth " N"
+Scan through depth
+.IR N .
+The scan root is depth 0, and a direct entry is depth 1.
+This option may be repeated.
+The last value is used.
+.IP
+.B \-\-max\-depth 0
+validates the scan root but does not scan any entries.
+.B \-\-max\-depth
+.I N
+diagnoses through depth
+.I N
+and does not descend deeper.
+.IP
+.I N
+must be a non-negative integer.
+This option may be combined with
+.BR \-\-exclude .
+An invalid
+.I N
+is an invocation error and causes
+.B dotdoc
+to exit with status 2.
+.TP
 .BR \-h ", " \-\-help
 Show help information and exit.
 .TP
@@ -90,6 +119,8 @@ This does not indicate program failure.
 An invocation, filesystem, or scan error occurred.
 Invalid
 .B \-\-exclude
+or
+.B \-\-max\-depth
 usage is an invocation error.
 .SH EXAMPLES
 Scan the default dotfiles tree:
@@ -113,6 +144,14 @@ Skip known-noise subtrees under a broad scan root:
 .nf
 .RS
 dotdoc --exclude .local/share/Steam --exclude .cache "$HOME"
+.RE
+.fi
+.PP
+Limit scan depth under a broad scan root:
+.PP
+.nf
+.RS
+dotdoc --max-depth 3 "$HOME"
 .RE
 .fi
 .PP
