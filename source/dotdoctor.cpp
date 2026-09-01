@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include <algorithm>
+#include <charconv>
 #include <cstddef>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -38,6 +40,8 @@ int scan_diagnostic_findings(
     const std::vector<fs::path>& exclude_paths,
     std::vector<Finding>& findings);
 
+bool parse_max_depth(const std::string& value, std::size_t& max_depth);
+
 void print_help();
 void print_version();
 
@@ -48,6 +52,7 @@ int main(int argc, char* argv[]) {
     std::vector<fs::path> exclude_paths;
     fs::path scan_root;
     bool scan_root_provided = false;
+    std::optional<std::size_t> max_depth;
 
     for(std::size_t i = 0; i < args.size(); ++i) {
         const auto& arg = args[i];
@@ -69,6 +74,24 @@ int main(int argc, char* argv[]) {
             }
 
             exclude_paths.push_back(args[i + 1]);
+            ++i;
+            continue;
+        }
+
+        if(arg == "--max-depth") {
+            if(i + 1 >= args.size()) {
+                std::cerr << "Error: --max-depth option requires a non-negative integer argument.\n";
+                return kExitError;
+            }
+
+            std::size_t parsed_max_depth = 0;
+
+            if(!parse_max_depth(args[i + 1], parsed_max_depth)) {
+                std::cerr << "Error: Invalid --max-depth value: " << args[i + 1] << '\n';
+                return kExitError;
+            }
+
+            max_depth = parsed_max_depth;
             ++i;
             continue;
         }
@@ -260,6 +283,19 @@ int scan_diagnostic_findings(const fs::path& scan_root, const std::vector<fs::pa
     }
 
     return kExitClean;
+}
+
+bool parse_max_depth(const std::string& value, std::size_t& max_depth) {
+    if(value.empty()) {
+        return false;
+    }
+
+    const char* begin = value.data();
+    const char* end = begin + value.size();
+
+    const auto result = std::from_chars(begin, end, max_depth);
+
+    return result.ec == std::errc{} && result.ptr == end;
 }
 
 void print_help() {
