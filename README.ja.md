@@ -33,6 +33,7 @@ Early development（初期開発段階）です。このsource treeが返すvers
 - absolute symbolic linkの検出
 - `--exclude PATH`
 - `--max-depth N`
+- `--only KIND`
 - `-h` / `--help`
 - `--version`
 
@@ -48,6 +49,7 @@ dotdoc [OPTIONS] [PATH]
 - `dotdoc PATH` — 指定したdirectory treeを走査する
 - `dotdoc --exclude PATH` — scan rootからの相対`PATH`を除外する。複数回指定できる
 - `dotdoc --max-depth N` — depth `N`まで走査する。scan rootはdepth 0。複数回指定できる
+- `dotdoc --only KIND` — 指定したdiagnostic kindのfindingだけを表示する。複数回指定できる
 - `dotdoc -h`、`dotdoc --help` — usageを表示して終了する
 - `dotdoc --version` — version情報を表示して終了する
 
@@ -80,6 +82,20 @@ dotdoc --max-depth 3 "$HOME"
 
 `--max-depth N`はscan rootをdepth 0と見なします。`N`は0以上の整数です。
 複数回指定した場合は、最後の値が有効です。
+
+`--only`を使うと、表示するdiagnostic kindを絞り込めます。現在指定できる
+kindは`broken`と`absolute`です。
+
+```sh
+dotdoc --only broken "$HOME/dotfiles"
+dotdoc --only absolute "$HOME/dotfiles"
+dotdoc --only broken --only absolute "$HOME/dotfiles"
+```
+
+`--only`は複数回指定でき、複数指定はORとして扱います。scan時には従来どおり
+全diagnostic findingをcollectし、その後でfilterします。filter後findingが0件なら
+`OK: no findings.`を表示して終了コード`0`、1件以上なら終了コード`1`です。
+未知のkindはinvocation errorとなり、終了コードは`2`です。
 
 `--help`と`--version`は`$HOME`やscan rootの確認より先に処理されるため、
 どちらも利用できない状態でも動作します。
@@ -139,6 +155,10 @@ invocation errorとfilesystem errorは標準エラー出力へ書き出されま
 - `N`は0以上の整数です。invalidな値はinvocation errorとなり、終了コード
   は`2`です。`--max-depth`は`--exclude`と併用できます。複数回指定した
   場合は、最後の値が有効です。
+- `--only KIND`は`broken`または`absolute`を指定でき、複数回指定した場合は
+  ORとして扱います。全findingをcollectした後でfilterし、表示、finding数、
+  終了コードはfilter後findingを基準にします。未知のkindはinvocation errorで
+  終了コード`2`です。
 - symbolic linkはsymbolic link自身として検査します。directory symbolic linkは
   それ自体を検査しますが、その先のtree（target tree）は辿りません。
 - diagnosticはfilesystemの状態に基づいて行い、GNU Stow固有のdirectory構造を

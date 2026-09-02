@@ -33,6 +33,9 @@ both broken and absolute symbolic-link findings.
 .B \-\-max\-depth
 limits how deep the scan descends.
 The scan root is depth 0, and a direct entry is depth 1.
+.PP
+.B \-\-only
+filters diagnostic findings by kind after the scan completes.
 .SH OPTIONS
 .TP
 .BI \-\-exclude " PATH"
@@ -97,6 +100,30 @@ is an invocation error and causes
 .B dotdoc
 to exit with status 2.
 .TP
+.BI \-\-only " KIND"
+Show only findings of diagnostic
+.IR KIND .
+The available kinds are
+.B broken
+and
+.BR absolute .
+This option may be repeated.
+Repeated values use OR semantics.
+.IP
+All diagnostic findings are collected before this filter is applied.
+Output, the reported finding count, and exit status are based on the
+filtered findings.
+If no findings remain after filtering,
+.B dotdoc
+prints
+.B "OK: no findings."
+and exits with status 0.
+An unknown
+.I KIND
+is an invocation error and causes
+.B dotdoc
+to exit with status 2.
+.TP
 .BR \-h ", " \-\-help
 Show help information and exit.
 .TP
@@ -118,9 +145,10 @@ This does not indicate program failure.
 .B 2
 An invocation, filesystem, or scan error occurred.
 Invalid
-.B \-\-exclude
+.BR \-\-exclude ,
+.BR \-\-max\-depth ,
 or
-.B \-\-max\-depth
+.B \-\-only
 usage is an invocation error.
 .SH EXAMPLES
 Scan the default dotfiles tree:
@@ -152,6 +180,22 @@ Limit scan depth under a broad scan root:
 .nf
 .RS
 dotdoc --max-depth 3 "$HOME"
+.RE
+.fi
+.PP
+Show only broken symbolic-link findings:
+.PP
+.nf
+.RS
+dotdoc --only broken "$HOME/dotfiles"
+.RE
+.fi
+.PP
+Select multiple diagnostic kinds with OR semantics:
+.PP
+.nf
+.RS
+dotdoc --only broken --only absolute "$HOME/dotfiles"
 .RE
 .fi
 .PP

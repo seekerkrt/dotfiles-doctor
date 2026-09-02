@@ -366,6 +366,20 @@ expect_stdout_contains \
     '--max-depth N' \
     "$DOTDOC" --help
 
+# 18b. Help lists only option
+
+expect_stdout_contains \
+    "--help lists only option" \
+    '--only KIND' \
+    "$DOTDOC" --help
+
+# 18c. Help lists available diagnostic kinds
+
+expect_stdout_contains \
+    "--help lists available diagnostic kinds" \
+    'Available kinds: broken, absolute' \
+    "$DOTDOC" --help
+
 # 19. Help documents exit status
 
 expect_stdout_contains \
@@ -777,6 +791,135 @@ expect_result \
     1 \
     "$expected" \
     "$DOTDOC" --max-depth 3 "$root"
+
+# 54. Only broken findings
+
+root="$TMP_ROOT/only-filter"
+mkdir -p "$root"
+
+absolute_target="$TMP_ROOT/only-filter-target"
+touch "$absolute_target"
+missing_absolute_target="$TMP_ROOT/only-filter-missing"
+
+ln -s missing-relative "$root/a-broken"
+ln -s "$absolute_target" "$root/b-absolute"
+ln -s "$missing_absolute_target" "$root/c-both"
+
+expected_broken=$(printf '%s\n%s\n%s' \
+    'BROKEN: "a-broken" -> "missing-relative"' \
+    "BROKEN: \"c-both\" -> \"$missing_absolute_target\"" \
+    'Found 2 findings.')
+
+expect_result \
+    "--only broken shows only broken findings" \
+    1 \
+    "$expected_broken" \
+    "$DOTDOC" --only broken "$root"
+
+# 55. Only absolute findings
+
+expected_absolute=$(printf '%s\n%s\n%s' \
+    "ABSOLUTE: \"b-absolute\" -> \"$absolute_target\"" \
+    "ABSOLUTE: \"c-both\" -> \"$missing_absolute_target\"" \
+    'Found 2 findings.')
+
+expect_result \
+    "--only absolute shows only absolute findings" \
+    1 \
+    "$expected_absolute" \
+    "$DOTDOC" --only absolute "$root"
+
+# 56. Repeatable only uses OR semantics
+
+expected_all_kinds=$(printf '%s\n%s\n%s\n%s\n%s' \
+    'BROKEN: "a-broken" -> "missing-relative"' \
+    "ABSOLUTE: \"b-absolute\" -> \"$absolute_target\"" \
+    "BROKEN: \"c-both\" -> \"$missing_absolute_target\"" \
+    "ABSOLUTE: \"c-both\" -> \"$missing_absolute_target\"" \
+    'Found 4 findings.')
+
+expect_result \
+    "repeatable --only uses OR semantics" \
+    1 \
+    "$expected_all_kinds" \
+    "$DOTDOC" --only broken --only absolute "$root"
+
+# 57. Filtered result with no findings exits cleanly
+
+absolute_only_root="$TMP_ROOT/only-filter-absolute-only"
+mkdir -p "$absolute_only_root"
+absolute_only_target="$TMP_ROOT/only-filter-absolute-only-target"
+touch "$absolute_only_target"
+ln -s "$absolute_only_target" "$absolute_only_root/link"
+
+expect_result \
+    "--only filtered result with no findings exits cleanly" \
+    0 \
+    'OK: no findings.' \
+    "$DOTDOC" --only broken "$absolute_only_root"
+
+# 58. Unknown diagnostic kind is rejected
+
+expect_exit \
+    "unknown --only kind is rejected" \
+    2 \
+    "$DOTDOC" --only unknown "$root"
+
+# 59. Only requires diagnostic kind argument
+
+expect_exit \
+    "--only requires diagnostic kind argument" \
+    2 \
+    "$DOTDOC" --only
+
+# 60. Duplicate only kind is idempotent
+
+expect_result \
+    "duplicate --only kind is idempotent" \
+    1 \
+    "$expected_broken" \
+    "$DOTDOC" --only broken --only broken "$root"
+
+# 61. Only works after positional scan root
+
+expect_result \
+    "--only works after positional scan root" \
+    1 \
+    "$expected_broken" \
+    "$DOTDOC" "$root" --only broken
+
+# 62. Only works with exclude
+
+expected=$(printf '%s\n%s' \
+    "ABSOLUTE: \"b-absolute\" -> \"$absolute_target\"" \
+    'Found 1 finding.')
+
+expect_result \
+    "--only works with exclude" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --only absolute --exclude c-both "$root"
+
+# 63. Only works with max depth
+
+root="$TMP_ROOT/only-max-depth"
+mkdir -p "$root/dir"
+
+max_depth_target="$TMP_ROOT/only-max-depth-target"
+touch "$max_depth_target"
+
+ln -s missing-depth1 "$root/depth1-broken"
+ln -s "$max_depth_target" "$root/dir/depth2-absolute"
+
+expected=$(printf '%s\n%s' \
+    "ABSOLUTE: \"dir/depth2-absolute\" -> \"$max_depth_target\"" \
+    'Found 1 finding.')
+
+expect_result \
+    "--only works with max depth" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --max-depth 2 --only absolute "$root"
 
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 
