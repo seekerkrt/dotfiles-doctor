@@ -33,6 +33,7 @@ Available today:
 - `--exclude PATH`
 - `--max-depth N`
 - `--only KIND`
+- Diagnostic kind summary counts
 - `-h` / `--help`
 - `--version`
 
@@ -113,8 +114,14 @@ A single symbolic link can produce more than one finding.
 $ dotdoc ~/dotfiles
 ABSOLUTE: "gitconfig" -> "/home/example/.config/git/config"
 BROKEN: "nvim/init.lua" -> "../missing/init.lua"
-Found 2 findings.
+Found 2 findings (BROKEN: 1, ABSOLUTE: 1).
 ```
+
+After the finding lines, `dotdoc` prints one summary line with the total
+finding count and the count for each diagnostic kind. Kind counts are always
+shown in the fixed order `BROKEN`, `ABSOLUTE`, including kinds whose count is
+zero. When `--only` is used, both the total and kind counts are based only on
+the filtered findings.
 
 When nothing is found:
 

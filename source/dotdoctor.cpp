@@ -47,6 +47,8 @@ std::optional<DiagnosticKind> parse_diagnostic_kind(const std::string& value);
 
 std::vector<Finding> filter_findings_by_kind(const std::vector<Finding>& findings, const std::vector<DiagnosticKind>& only_kinds);
 
+std::size_t count_findings_by_kind(const std::vector<Finding>& findings, DiagnosticKind kind);
+
 void print_help();
 void print_version();
 
@@ -225,11 +227,13 @@ int main(int argc, char* argv[]) {
                 break;
         }
     }
+    const std::size_t broken_count = count_findings_by_kind(findings, DiagnosticKind::kBroken);
+    const std::size_t absolute_count = count_findings_by_kind(findings, DiagnosticKind::kAbsolute);
 
     std::cout << "Found " << findings.size()
               << " finding"
               << (findings.size() == 1 ? "" : "s")
-              << ".\n";
+              << " (BROKEN: " << broken_count << ", ABSOLUTE: " << absolute_count << ").\n";
 
     return kExitFindings;
 }
@@ -354,6 +358,17 @@ std::vector<Finding> filter_findings_by_kind(const std::vector<Finding>& finding
         }
     }
     return filtered_findings;
+}
+
+std::size_t count_findings_by_kind(const std::vector<Finding>& findings, DiagnosticKind kind) {
+    const auto count = std::count_if(
+        findings.begin(),
+        findings.end(),
+        [kind](const Finding& f) {
+            return f.kind == kind;
+        });
+
+    return static_cast<std::size_t>(count);
 }
 
 void print_help() {
