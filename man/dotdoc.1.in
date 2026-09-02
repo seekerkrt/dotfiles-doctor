@@ -130,7 +130,28 @@ Show help information and exit.
 .B \-\-version
 Show version information and exit.
 .SH OUTPUT
-Diagnostic findings are written to standard output.
+Diagnostic findings are written to standard output, one line per finding.
+After the finding lines,
+.B dotdoc
+prints a one-line summary containing the total finding count and the
+per-kind counts.
+.PP
+Kind counts are always shown in the fixed order
+.B BROKEN
+then
+.BR ABSOLUTE ,
+including kinds whose count is zero.
+When
+.B \-\-only
+is used, the total and per-kind counts are based only on the filtered findings.
+.PP
+For example:
+.PP
+.nf
+.RS
+Found 2 findings (BROKEN: 1, ABSOLUTE: 1).
+.RE
+.fi
 
 Invocation and filesystem errors are written to standard error.
 .SH EXIT STATUS

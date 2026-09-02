@@ -34,6 +34,7 @@ Early development（初期開発段階）です。このsource treeが返すvers
 - `--exclude PATH`
 - `--max-depth N`
 - `--only KIND`
+- diagnostic kind別の件数summary
 - `-h` / `--help`
 - `--version`
 
@@ -111,8 +112,13 @@ path順に並びます。各行にはscan rootからの相対pathと、symbolic 
 $ dotdoc ~/dotfiles
 ABSOLUTE: "gitconfig" -> "/home/example/.config/git/config"
 BROKEN: "nvim/init.lua" -> "../missing/init.lua"
-Found 2 findings.
+Found 2 findings (BROKEN: 1, ABSOLUTE: 1).
 ```
+
+finding行の後には、total finding数とdiagnostic kind別件数を含むsummaryを1行だけ
+表示します。kindの表示順は常に`BROKEN`, `ABSOLUTE`で固定し、0件のkindも
+省略しません。`--only`を使用した場合は、totalとkind別件数のどちらもfilter後
+findingsだけを基準にします。
 
 findingsがない場合は次のようになります。
 

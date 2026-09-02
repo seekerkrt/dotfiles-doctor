@@ -192,7 +192,7 @@ ln -s missing-file "$root/broken-link"
 
 expected=$(printf '%s\n%s' \
     'BROKEN: "broken-link" -> "missing-file"' \
-    'Found 1 finding.')
+    'Found 1 finding (BROKEN: 1, ABSOLUTE: 0).')
 
 expect_result \
     "broken relative symlink" \
@@ -210,7 +210,7 @@ ln -s "$target" "$root/valid-link"
 
 expected=$(printf '%s\n%s' \
     "ABSOLUTE: \"valid-link\" -> \"$target\"" \
-    'Found 1 finding.')
+    'Found 1 finding (BROKEN: 0, ABSOLUTE: 1).')
 
 expect_result \
     "valid absolute symlink" \
@@ -228,7 +228,7 @@ ln -s "$target" "$root/broken-link"
 expected=$(printf '%s\n%s\n%s' \
     "BROKEN: \"broken-link\" -> \"$target\"" \
     "ABSOLUTE: \"broken-link\" -> \"$target\"" \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 1, ABSOLUTE: 1).')
 
 expect_result \
     "broken absolute symlink" \
@@ -247,7 +247,7 @@ ln -s "$target_dir" "$root/directory-link"
 
 expected=$(printf '%s\n%s' \
     "ABSOLUTE: \"directory-link\" -> \"$target_dir\"" \
-    'Found 1 finding.')
+    'Found 1 finding (BROKEN: 0, ABSOLUTE: 1).')
 
 expect_result \
     "directory symlink is not followed" \
@@ -293,7 +293,7 @@ ln -s "$target" "$root/a-absolute"
 expected=$(printf '%s\n%s\n%s' \
     "ABSOLUTE: \"a-absolute\" -> \"$target\"" \
     'BROKEN: "z-broken" -> "missing-z"' \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 1, ABSOLUTE: 1).')
 
 expect_result \
     "multiple findings are sorted" \
@@ -309,7 +309,7 @@ ln -s missing-default "$home/dotfiles/default-broken"
 
 expected=$(printf '%s\n%s' \
     'BROKEN: "default-broken" -> "missing-default"' \
-    'Found 1 finding.')
+    'Found 1 finding (BROKEN: 1, ABSOLUTE: 0).')
 
 expect_result \
     "default HOME/dotfiles" \
@@ -425,7 +425,7 @@ ln -s self-link "$root/self-link"
 
 expected=$(printf '%s\n%s' \
     'BROKEN: "self-link" -> "self-link"' \
-    'Found 1 finding.')
+    'Found 1 finding (BROKEN: 1, ABSOLUTE: 0).')
 
 expect_result \
     "self-referential symlink loop" \
@@ -443,7 +443,7 @@ ln -s a-link "$root/b-link"
 expected=$(printf '%s\n%s\n%s' \
     'BROKEN: "a-link" -> "b-link"' \
     'BROKEN: "b-link" -> "a-link"' \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 2, ABSOLUTE: 0).')
 
 expect_result \
     "mutual symlink loop" \
@@ -459,7 +459,7 @@ ln -s missing "$root/broken"
 
 expected=$(printf '%s\n%s' \
     'BROKEN: "broken" -> "missing"' \
-    'Found 1 finding.')
+    'Found 1 finding (BROKEN: 1, ABSOLUTE: 0).')
 
 expect_result \
     "single finding summary" \
@@ -477,7 +477,7 @@ ln -s missing-a "$root/a"
 expected=$(printf '%s\n%s\n%s' \
     'BROKEN: "a" -> "missing-a"' \
     'BROKEN: "b" -> "missing-b"' \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 2, ABSOLUTE: 0).')
 
 expect_result \
     "multiple findings summary" \
@@ -497,7 +497,7 @@ ln -s "$target" "$root/cache/hidden-broken"
 expected=$(printf '%s\n%s\n%s' \
     "BROKEN: \"cache/hidden-broken\" -> \"$target\"" \
     "ABSOLUTE: \"cache/hidden-broken\" -> \"$target\"" \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 1, ABSOLUTE: 1).')
 
 expect_result \
     "exclude one symlink" \
@@ -510,7 +510,7 @@ expect_result \
 expected=$(printf '%s\n%s\n%s' \
     "BROKEN: \"keep-broken\" -> \"$target\"" \
     "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 1, ABSOLUTE: 1).')
 
 expect_result \
     "exclude directory subtree" \
@@ -577,7 +577,7 @@ expected=$(printf '%s\n%s\n%s\n%s\n%s' \
     "ABSOLUTE: \"cache/hidden-broken\" -> \"$target\"" \
     "BROKEN: \"keep-broken\" -> \"$target\"" \
     "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
-    'Found 4 findings.')
+    'Found 4 findings (BROKEN: 2, ABSOLUTE: 2).')
 
 expect_result \
     "nonexistent exclude is a no-op" \
@@ -609,7 +609,7 @@ dotdoc_absolute=$(cd "$dotdoc_dir" && pwd)/$dotdoc_base
 expected=$(printf '%s\n%s\n%s' \
     "BROKEN: \"keep-broken\" -> \"$target\"" \
     "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 1, ABSOLUTE: 1).')
 
 expect_result \
     "exclude works with relative scan root" \
@@ -623,7 +623,7 @@ expect_result \
 expected=$(printf '%s\n%s\n%s' \
     "BROKEN: \"keep-broken\" -> \"$target\"" \
     "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 1, ABSOLUTE: 1).')
 
 expect_result \
     "exclude option works after positional scan root" \
@@ -656,7 +656,7 @@ dotdoc_absolute=$(cd "$dotdoc_dir" && pwd)/$dotdoc_base
 expected=$(printf '%s\n%s\n%s' \
     "BROKEN: \"keep-broken\" -> \"$target\"" \
     "ABSOLUTE: \"keep-broken\" -> \"$target\"" \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 1, ABSOLUTE: 1).')
 
 expect_result \
     "exclude works with relative scan root" \
@@ -684,7 +684,7 @@ expect_result \
 
 expected=$(printf '%s\n%s' \
     'BROKEN: "depth1" -> "missing-depth1"' \
-    'Found 1 finding.')
+    'Found 1 finding (BROKEN: 1, ABSOLUTE: 0).')
 
 expect_result \
     "max depth one scans direct entries only" \
@@ -697,7 +697,7 @@ expect_result \
 expected=$(printf '%s\n%s\n%s' \
     'BROKEN: "depth1" -> "missing-depth1"' \
     'BROKEN: "dir/depth2" -> "missing-depth2"' \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 2, ABSOLUTE: 0).')
 
 expect_result \
     "max depth two scans through depth two" \
@@ -709,7 +709,7 @@ expect_result \
 
 expected=$(printf '%s\n%s' \
     'BROKEN: "depth1" -> "missing-depth1"' \
-    'Found 1 finding.')
+    'Found 1 finding (BROKEN: 1, ABSOLUTE: 0).')
 
 expect_result \
     "max depth works with exclude" \
@@ -757,7 +757,7 @@ expect_exit \
 expected=$(printf '%s\n%s\n%s' \
     'BROKEN: "depth1" -> "missing-depth1"' \
     'BROKEN: "dir/depth2" -> "missing-depth2"' \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 2, ABSOLUTE: 0).')
 
 expect_result \
     "repeated max depth uses the last value" \
@@ -784,7 +784,7 @@ ln -s "$target_dir" "$root/directory-link"
 
 expected=$(printf '%s\n%s' \
     "ABSOLUTE: \"directory-link\" -> \"$target_dir\"" \
-    'Found 1 finding.')
+    'Found 1 finding (BROKEN: 0, ABSOLUTE: 1).')
 
 expect_result \
     "max depth does not follow directory symlinks" \
@@ -808,7 +808,7 @@ ln -s "$missing_absolute_target" "$root/c-both"
 expected_broken=$(printf '%s\n%s\n%s' \
     'BROKEN: "a-broken" -> "missing-relative"' \
     "BROKEN: \"c-both\" -> \"$missing_absolute_target\"" \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 2, ABSOLUTE: 0).')
 
 expect_result \
     "--only broken shows only broken findings" \
@@ -821,7 +821,7 @@ expect_result \
 expected_absolute=$(printf '%s\n%s\n%s' \
     "ABSOLUTE: \"b-absolute\" -> \"$absolute_target\"" \
     "ABSOLUTE: \"c-both\" -> \"$missing_absolute_target\"" \
-    'Found 2 findings.')
+    'Found 2 findings (BROKEN: 0, ABSOLUTE: 2).')
 
 expect_result \
     "--only absolute shows only absolute findings" \
@@ -836,7 +836,7 @@ expected_all_kinds=$(printf '%s\n%s\n%s\n%s\n%s' \
     "ABSOLUTE: \"b-absolute\" -> \"$absolute_target\"" \
     "BROKEN: \"c-both\" -> \"$missing_absolute_target\"" \
     "ABSOLUTE: \"c-both\" -> \"$missing_absolute_target\"" \
-    'Found 4 findings.')
+    'Found 4 findings (BROKEN: 2, ABSOLUTE: 2).')
 
 expect_result \
     "repeatable --only uses OR semantics" \
@@ -892,7 +892,7 @@ expect_result \
 
 expected=$(printf '%s\n%s' \
     "ABSOLUTE: \"b-absolute\" -> \"$absolute_target\"" \
-    'Found 1 finding.')
+    'Found 1 finding (BROKEN: 0, ABSOLUTE: 1).')
 
 expect_result \
     "--only works with exclude" \
@@ -913,13 +913,42 @@ ln -s "$max_depth_target" "$root/dir/depth2-absolute"
 
 expected=$(printf '%s\n%s' \
     "ABSOLUTE: \"dir/depth2-absolute\" -> \"$max_depth_target\"" \
-    'Found 1 finding.')
+    'Found 1 finding (BROKEN: 0, ABSOLUTE: 1).')
 
 expect_result \
     "--only works with max depth" \
     1 \
     "$expected" \
     "$DOTDOC" --max-depth 2 --only absolute "$root"
+
+
+# 64. Diagnostic kind summary counts mixed findings
+
+root="$TMP_ROOT/kind-summary-mixed"
+mkdir -p "$root"
+
+summary_absolute_target="$TMP_ROOT/kind-summary-target"
+touch "$summary_absolute_target"
+summary_missing_absolute_target="$TMP_ROOT/kind-summary-missing"
+
+ln -s missing-a "$root/a-broken"
+ln -s missing-b "$root/b-broken"
+ln -s "$summary_absolute_target" "$root/c-absolute"
+ln -s "$summary_missing_absolute_target" "$root/d-both"
+
+expected=$(printf '%s\n%s\n%s\n%s\n%s\n%s' \
+    'BROKEN: "a-broken" -> "missing-a"' \
+    'BROKEN: "b-broken" -> "missing-b"' \
+    "ABSOLUTE: \"c-absolute\" -> \"$summary_absolute_target\"" \
+    "BROKEN: \"d-both\" -> \"$summary_missing_absolute_target\"" \
+    "ABSOLUTE: \"d-both\" -> \"$summary_missing_absolute_target\"" \
+    'Found 5 findings (BROKEN: 3, ABSOLUTE: 2).')
+
+expect_result \
+    "diagnostic kind summary counts mixed findings" \
+    1 \
+    "$expected" \
+    "$DOTDOC" "$root"
 
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 
