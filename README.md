@@ -32,6 +32,7 @@ Available today:
 - Absolute symbolic link detection
 - `--exclude PATH`
 - `--max-depth N`
+- `--only KIND`
 - `-h` / `--help`
 - `--version`
 
@@ -48,6 +49,7 @@ dotdoc [OPTIONS] [PATH]
 - `dotdoc PATH` — scan the specified directory tree
 - `dotdoc --exclude PATH` — exclude `PATH` relative to the scan root; may be repeated
 - `dotdoc --max-depth N` — scan through depth `N`; the scan root is depth 0; may be repeated
+- `dotdoc --only KIND` — show only findings of the selected diagnostic kind; may be repeated
 - `dotdoc -h`, `dotdoc --help` — show usage and exit
 - `dotdoc --version` — show version information and exit
 
@@ -80,6 +82,22 @@ dotdoc --max-depth 3 "$HOME"
 
 `--max-depth N` treats the scan root as depth 0. `N` must be a
 non-negative integer. If repeated, the last value is used.
+
+`--only` filters the displayed diagnostic kinds. The currently available
+kinds are `broken` and `absolute`.
+
+```sh
+dotdoc --only broken "$HOME/dotfiles"
+dotdoc --only absolute "$HOME/dotfiles"
+dotdoc --only broken --only absolute "$HOME/dotfiles"
+```
+
+`--only` may be repeated, and multiple values use OR semantics. The scan
+still collects all diagnostic findings first and applies the filter
+afterward. If no findings remain after filtering, `dotdoc` prints
+`OK: no findings.` and exits with status `0`; one or more filtered findings
+produce status `1`. An unknown kind is an invocation error and exits with
+status `2`.
 
 `--help` and `--version` are handled before `$HOME` and the scan root are
 inspected, so they work even when neither is usable.
@@ -142,6 +160,10 @@ means `dotdoc` itself could not do its job.
 - `N` must be a non-negative integer. An invalid value is an invocation
   error and exits with status `2`. `--max-depth` may be combined with
   `--exclude`. If `--max-depth` is repeated, the last value is used.
+- `--only KIND` accepts `broken` or `absolute`. Repeated values use OR
+  semantics. All findings are collected before filtering, and output,
+  finding counts, and exit status are based on the filtered findings.
+  An unknown kind is an invocation error and exits with status `2`.
 - Symbolic links are inspected as symbolic links. A directory symbolic link
   is checked itself, but the tree behind it is not traversed.
 - Diagnostics are based on filesystem state and do not require a GNU Stow

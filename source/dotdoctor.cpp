@@ -43,6 +43,10 @@ int scan_diagnostic_findings(
 
 bool parse_max_depth(const std::string& value, std::size_t& max_depth);
 
+std::optional<DiagnosticKind> parse_diagnostic_kind(const std::string& value);
+
+std::vector<Finding> filter_findings_by_kind(const std::vector<Finding>& findings, const std::vector<DiagnosticKind>& only_kinds);
+
 void print_help();
 void print_version();
 
@@ -54,6 +58,7 @@ int main(int argc, char* argv[]) {
     fs::path scan_root;
     bool scan_root_provided = false;
     std::optional<std::size_t> max_depth;
+    std::vector<DiagnosticKind> only_kinds;
 
     for(std::size_t i = 0; i < args.size(); ++i) {
         const auto& arg = args[i];
@@ -97,6 +102,23 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
+        if(arg == "--only") {
+            if(i + 1 >= args.size()) {
+                std::cerr << "Error: --only option requires a diagnostic kind argument.\n";
+                return kExitError;
+            }
+
+            const auto parsed_kind = parse_diagnostic_kind(args[i + 1]);
+
+            if(!parsed_kind.has_value()) {
+                std::cerr << "Error: Invalid --only value: " << args[i + 1] << '\n';
+                return kExitError;
+            }
+
+            only_kinds.push_back(parsed_kind.value());
+            ++i;
+            continue;
+        }
         if(scan_root_provided) {
             std::cerr << "Error: Only one PATH argument is allowed.\n";
             return kExitError;
@@ -175,6 +197,10 @@ int main(int argc, char* argv[]) {
 
     if(scan_result != kExitClean) {
         return scan_result;
+    }
+
+    if(!only_kinds.empty()) {
+        findings = filter_findings_by_kind(findings, only_kinds);
     }
 
     if(findings.empty()) {
@@ -308,6 +334,28 @@ bool parse_max_depth(const std::string& value, std::size_t& max_depth) {
     return result.ec == std::errc{} && result.ptr == end;
 }
 
+std::optional<DiagnosticKind> parse_diagnostic_kind(const std::string& value) {
+    if(value == "broken") {
+        return DiagnosticKind::kBroken;
+    }
+    if(value == "absolute") {
+        return DiagnosticKind::kAbsolute;
+    }
+
+    return std::nullopt;
+}
+
+std::vector<Finding> filter_findings_by_kind(const std::vector<Finding>& findings, const std::vector<DiagnosticKind>& only_kinds) {
+    std::vector<Finding> filtered_findings;
+
+    for(const auto& finding : findings) {
+        if(std::find(only_kinds.begin(), only_kinds.end(), finding.kind) != only_kinds.end()) {
+            filtered_findings.push_back(finding);
+        }
+    }
+    return filtered_findings;
+}
+
 void print_help() {
     std::cout << "Usage: dotdoc [OPTIONS] [PATH]\n"
               << "\n"
@@ -319,6 +367,9 @@ void print_help() {
               << "Options:\n"
               << "  --exclude PATH  Exclude PATH relative to the scan root; may be repeated\n"
               << "  --max-depth N   Scan through depth N; scan root is depth 0; may be repeated\n"
+              << "  --only KIND     Show only findings of the specified diagnostic kind; may be repeated\n"
+              << "                  Available kinds: broken, absolute\n"
+              << "\n"
               << "  -h, --help      Show this help and exit\n"
               << "  --version       Show version information and exit\n"
               << "\n"
