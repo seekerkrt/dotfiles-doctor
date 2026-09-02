@@ -4,7 +4,7 @@ _srcname=dotfiles-doctor-src
 
 # pkgver selects the upstream release tag to package.
 # pkgver() verifies that the checked-out release carries the same VERSION.
-pkgver=0.2.0
+pkgver=0.3.0
 pkgrel=1
 pkgdesc='Read-only diagnostic CLI for dotfiles trees'
 arch=('x86_64')
