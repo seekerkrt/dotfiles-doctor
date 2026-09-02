@@ -20,9 +20,13 @@ compile_commands.json
 *.swo
 *~
 .DS_Store
+/.cache/
+
+# kilo
+/.kilo/
 
 # VSCODE local settings
-.vscode/
+/.vscode/
 
 # Arch package build output (makepkg runs in the repository root)
 /src/
