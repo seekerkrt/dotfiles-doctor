@@ -1,4 +1,4 @@
-.TH DOTDOC 1 "August 2026" "dotdoc @PROJECT_VERSION@" "User Commands"
+.TH DOTDOC 1 "September 2026" "dotdoc @PROJECT_VERSION@" "User Commands"
 .SH NAME
 dotdoc \- scan a directory tree for symbolic-link findings
 .SH SYNOPSIS

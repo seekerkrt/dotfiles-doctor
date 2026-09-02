@@ -24,7 +24,7 @@ diagnosticはGNU Stow固有のmetadataやdirectory構造ではなく、filesyste
 
 ## 現状
 
-Early development（初期開発段階）です。このsource treeが返すversionは`0.2.0`
+Early development（初期開発段階）です。このsource treeが返すversionは`0.3.0`
 です。
 
 現在利用できる機能は次のとおりです。
