@@ -32,6 +32,7 @@ Early development（初期開発段階）です。このsource treeが返すvers
 - broken symbolic linkの検出
 - absolute symbolic linkの検出
 - `--exclude PATH`
+- `--max-depth N`
 - `-h` / `--help`
 - `--version`
 
@@ -46,6 +47,7 @@ dotdoc [OPTIONS] [PATH]
 - `dotdoc` — `$HOME/dotfiles`を走査する
 - `dotdoc PATH` — 指定したdirectory treeを走査する
 - `dotdoc --exclude PATH` — scan rootからの相対`PATH`を除外する。複数回指定できる
+- `dotdoc --max-depth N` — depth `N`まで走査する。scan rootはdepth 0。複数回指定できる
 - `dotdoc -h`、`dotdoc --help` — usageを表示して終了する
 - `dotdoc --version` — version情報を表示して終了する
 
@@ -69,6 +71,15 @@ dotdoc --exclude .local/share/Steam --exclude .cache "$HOME"
 
 `--exclude`の`PATH`はscan root基準のliteral pathであり、glob、正規表現、
 ignore fileの規則ではありません。
+
+走査する最大depthは`--max-depth`で制限できます。
+
+```sh
+dotdoc --max-depth 3 "$HOME"
+```
+
+`--max-depth N`はscan rootをdepth 0と見なします。`N`は0以上の整数です。
+複数回指定した場合は、最後の値が有効です。
 
 `--help`と`--version`は`$HOME`やscan rootの確認より先に処理されるため、
 どちらも利用できない状態でも動作します。
@@ -121,6 +132,13 @@ invocation errorとfilesystem errorは標準エラー出力へ書き出されま
   絶対path、またはscan root外へescapeするexclude pathはinvocation errorとなり、
   終了コードは`2`です。
 - `--exclude`は`BROKEN`と`ABSOLUTE`の両方の診断に共通して適用されます。
+- `--max-depth N`は走査する最大depthを制限します。scan rootはdepth 0、
+  direct entryはdepth 1です。`--max-depth 0`はrootをvalidateしますが、
+  entryはscanしません。`--max-depth N`はdepth `N`まで診断し、それより
+  深くdescendしません。
+- `N`は0以上の整数です。invalidな値はinvocation errorとなり、終了コード
+  は`2`です。`--max-depth`は`--exclude`と併用できます。複数回指定した
+  場合は、最後の値が有効です。
 - symbolic linkはsymbolic link自身として検査します。directory symbolic linkは
   それ自体を検査しますが、その先のtree（target tree）は辿りません。
 - diagnosticはfilesystemの状態に基づいて行い、GNU Stow固有のdirectory構造を
@@ -132,8 +150,8 @@ invocation errorとfilesystem errorは標準エラー出力へ書き出されま
 場合があります。runtime環境、container、WineやProton、Electron application
 などは、一時的、環境依存、または意図的に解決できないsymbolic linkを生成する
 ことがあります。それらもfilesystem上のfindingとして正しく報告されます。
-既知のnoiseとなるsubtreeは`--exclude`で除外でき、残りのfindingsの判定は
-変わりません。
+既知のnoiseとなるsubtreeは`--exclude`で除外でき、走査depthは`--max-depth`
+で制限できます。残りのfindingsの判定は変わりません。
 
 ## Build
 

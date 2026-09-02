@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #include <algorithm>
+#include <charconv>
 #include <cstddef>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -36,7 +38,10 @@ int report_filesystem_error(
 int scan_diagnostic_findings(
     const fs::path& scan_root,
     const std::vector<fs::path>& exclude_paths,
-    std::vector<Finding>& findings);
+    std::vector<Finding>& findings,
+    const std::optional<std::size_t>& max_depth);
+
+bool parse_max_depth(const std::string& value, std::size_t& max_depth);
 
 void print_help();
 void print_version();
@@ -48,6 +53,7 @@ int main(int argc, char* argv[]) {
     std::vector<fs::path> exclude_paths;
     fs::path scan_root;
     bool scan_root_provided = false;
+    std::optional<std::size_t> max_depth;
 
     for(std::size_t i = 0; i < args.size(); ++i) {
         const auto& arg = args[i];
@@ -69,6 +75,24 @@ int main(int argc, char* argv[]) {
             }
 
             exclude_paths.push_back(args[i + 1]);
+            ++i;
+            continue;
+        }
+
+        if(arg == "--max-depth") {
+            if(i + 1 >= args.size()) {
+                std::cerr << "Error: --max-depth option requires a non-negative integer argument.\n";
+                return kExitError;
+            }
+
+            std::size_t parsed_max_depth = 0;
+
+            if(!parse_max_depth(args[i + 1], parsed_max_depth)) {
+                std::cerr << "Error: Invalid --max-depth value: " << args[i + 1] << '\n';
+                return kExitError;
+            }
+
+            max_depth = parsed_max_depth;
             ++i;
             continue;
         }
@@ -145,7 +169,8 @@ int main(int argc, char* argv[]) {
         scan_result = scan_diagnostic_findings(
             scan_root,
             normalized_exclude_paths,
-            findings);
+            findings,
+            max_depth);
     }
 
     if(scan_result != kExitClean) {
@@ -192,7 +217,11 @@ int report_filesystem_error(const char* action,
     return kExitError;
 }
 
-int scan_diagnostic_findings(const fs::path& scan_root, const std::vector<fs::path>& exclude_paths, std::vector<Finding>& findings) {
+int scan_diagnostic_findings(const fs::path& scan_root, const std::vector<fs::path>& exclude_paths, std::vector<Finding>& findings, const std::optional<std::size_t>& max_depth) {
+    if(max_depth.has_value() && max_depth.value() == 0) {
+        return kExitClean;
+    }
+
     std::error_code ec;
     // Default iterator options intentionally do not follow directory symlinks.
     fs::recursive_directory_iterator it(scan_root, ec);
@@ -220,6 +249,10 @@ int scan_diagnostic_findings(const fs::path& scan_root, const std::vector<fs::pa
                 return report_filesystem_error("failed while traversing", scan_root, ec);
             }
             continue;
+        }
+
+        if(max_depth.has_value() && max_depth.value() <= static_cast<std::size_t>(it.depth() + 1)) {
+            it.disable_recursion_pending();
         }
 
         const auto entry_status = it->symlink_status(ec);
@@ -262,6 +295,19 @@ int scan_diagnostic_findings(const fs::path& scan_root, const std::vector<fs::pa
     return kExitClean;
 }
 
+bool parse_max_depth(const std::string& value, std::size_t& max_depth) {
+    if(value.empty()) {
+        return false;
+    }
+
+    const char* begin = value.data();
+    const char* end = begin + value.size();
+
+    const auto result = std::from_chars(begin, end, max_depth);
+
+    return result.ec == std::errc{} && result.ptr == end;
+}
+
 void print_help() {
     std::cout << "Usage: dotdoc [OPTIONS] [PATH]\n"
               << "\n"
@@ -272,6 +318,7 @@ void print_help() {
               << "\n"
               << "Options:\n"
               << "  --exclude PATH  Exclude PATH relative to the scan root; may be repeated\n"
+              << "  --max-depth N   Scan through depth N; scan root is depth 0; may be repeated\n"
               << "  -h, --help      Show this help and exit\n"
               << "  --version       Show version information and exit\n"
               << "\n"

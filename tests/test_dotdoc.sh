@@ -359,6 +359,13 @@ expect_stdout_contains \
     '--exclude PATH' \
     "$DOTDOC" --help
 
+# 18a. Help lists max-depth option
+
+expect_stdout_contains \
+    "--help lists max-depth option" \
+    '--max-depth N' \
+    "$DOTDOC" --help
+
 # 19. Help documents exit status
 
 expect_stdout_contains \
@@ -643,6 +650,133 @@ expect_result \
     "$expected" \
     sh -c 'cd "$1" && exec "$2" --exclude cache tree' \
     sh "$relative_parent" "$dotdoc_absolute"
+
+# 42. Max depth zero scans no entries
+
+root="$TMP_ROOT/max-depth"
+mkdir -p "$root/dir/sub"
+
+ln -s missing-depth1 "$root/depth1"
+ln -s missing-depth2 "$root/dir/depth2"
+ln -s missing-depth3 "$root/dir/sub/depth3"
+
+expect_result \
+    "max depth zero scans no entries" \
+    0 \
+    'OK: no findings.' \
+    "$DOTDOC" --max-depth 0 "$root"
+
+# 43. Max depth one scans direct entries only
+
+expected=$(printf '%s\n%s' \
+    'BROKEN: "depth1" -> "missing-depth1"' \
+    'Found 1 finding.')
+
+expect_result \
+    "max depth one scans direct entries only" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --max-depth 1 "$root"
+
+# 44. Max depth two scans through depth two
+
+expected=$(printf '%s\n%s\n%s' \
+    'BROKEN: "depth1" -> "missing-depth1"' \
+    'BROKEN: "dir/depth2" -> "missing-depth2"' \
+    'Found 2 findings.')
+
+expect_result \
+    "max depth two scans through depth two" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --max-depth 2 "$root"
+
+# 45. Max depth works with exclude
+
+expected=$(printf '%s\n%s' \
+    'BROKEN: "depth1" -> "missing-depth1"' \
+    'Found 1 finding.')
+
+expect_result \
+    "max depth works with exclude" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --max-depth 3 --exclude dir "$root"
+
+# 46. Max depth requires integer argument
+
+expect_exit \
+    "max depth requires integer argument" \
+    2 \
+    "$DOTDOC" --max-depth
+
+# 47. Negative max depth is rejected
+
+expect_exit \
+    "negative max depth is rejected" \
+    2 \
+    "$DOTDOC" --max-depth -1 "$root"
+
+# 48. Non-numeric max depth is rejected
+
+expect_exit \
+    "non-numeric max depth is rejected" \
+    2 \
+    "$DOTDOC" --max-depth foo "$root"
+
+# 49. Max depth with trailing garbage is rejected
+
+expect_exit \
+    "max depth with trailing garbage is rejected" \
+    2 \
+    "$DOTDOC" --max-depth 1x "$root"
+
+# 50. Max depth overflow is rejected
+
+expect_exit \
+    "max depth overflow is rejected" \
+    2 \
+    "$DOTDOC" --max-depth 999999999999999999999999999999999999 "$root"
+
+# 51. Repeated max depth uses the last value
+
+expected=$(printf '%s\n%s\n%s' \
+    'BROKEN: "depth1" -> "missing-depth1"' \
+    'BROKEN: "dir/depth2" -> "missing-depth2"' \
+    'Found 2 findings.')
+
+expect_result \
+    "repeated max depth uses the last value" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --max-depth 1 --max-depth 2 "$root"
+
+# 52. Max depth works after positional scan root
+
+expect_result \
+    "max depth works after positional scan root" \
+    1 \
+    "$expected" \
+    "$DOTDOC" "$root" --max-depth 2
+
+# 53. Max depth does not follow directory symlinks
+
+root="$TMP_ROOT/max-depth-directory-link"
+target_dir="$TMP_ROOT/max-depth-directory-link-target"
+
+mkdir -p "$root" "$target_dir/sub"
+ln -s missing-child "$target_dir/sub/broken-child"
+ln -s "$target_dir" "$root/directory-link"
+
+expected=$(printf '%s\n%s' \
+    "ABSOLUTE: \"directory-link\" -> \"$target_dir\"" \
+    'Found 1 finding.')
+
+expect_result \
+    "max depth does not follow directory symlinks" \
+    1 \
+    "$expected" \
+    "$DOTDOC" --max-depth 3 "$root"
 
 printf '\n%d passed, %d failed\n' "$passed" "$failed"
 

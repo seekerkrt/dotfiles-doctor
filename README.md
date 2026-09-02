@@ -31,6 +31,7 @@ Available today:
 - Broken symbolic link detection
 - Absolute symbolic link detection
 - `--exclude PATH`
+- `--max-depth N`
 - `-h` / `--help`
 - `--version`
 
@@ -46,6 +47,7 @@ dotdoc [OPTIONS] [PATH]
 - `dotdoc` — scan `$HOME/dotfiles`
 - `dotdoc PATH` — scan the specified directory tree
 - `dotdoc --exclude PATH` — exclude `PATH` relative to the scan root; may be repeated
+- `dotdoc --max-depth N` — scan through depth `N`; the scan root is depth 0; may be repeated
 - `dotdoc -h`, `dotdoc --help` — show usage and exit
 - `dotdoc --version` — show version information and exit
 
@@ -69,6 +71,15 @@ dotdoc --exclude .local/share/Steam --exclude .cache "$HOME"
 
 `--exclude PATH` is a scan-root-relative literal path, not a glob, regular
 expression, or ignore-file rule.
+
+Scan depth can be limited with `--max-depth`:
+
+```sh
+dotdoc --max-depth 3 "$HOME"
+```
+
+`--max-depth N` treats the scan root as depth 0. `N` must be a
+non-negative integer. If repeated, the last value is used.
 
 `--help` and `--version` are handled before `$HOME` and the scan root are
 inspected, so they work even when neither is usable.
@@ -124,6 +135,13 @@ means `dotdoc` itself could not do its job.
   lexically escapes the scan root is an invocation error and exits with
   status `2`.
 - `--exclude` applies to both `BROKEN` and `ABSOLUTE` findings.
+- `--max-depth N` limits the scan to depth `N`. The scan root is depth 0,
+  and a direct entry is depth 1. `--max-depth 0` validates the scan root
+  but does not scan any entries. `--max-depth N` diagnoses through depth
+  `N` and does not descend deeper.
+- `N` must be a non-negative integer. An invalid value is an invocation
+  error and exits with status `2`. `--max-depth` may be combined with
+  `--exclude`. If `--max-depth` is repeated, the last value is used.
 - Symbolic links are inspected as symbolic links. A directory symbolic link
   is checked itself, but the tree behind it is not traversed.
 - Diagnostics are based on filesystem state and do not require a GNU Stow
@@ -136,7 +154,8 @@ number of findings. Runtime environments, containers, Wine or Proton,
 Electron applications, and similar software may create temporary,
 environment-specific, or intentionally unresolved symbolic links that are
 still correctly reported as filesystem findings. Use `--exclude` to skip
-known-noise subtrees without changing how remaining findings are judged.
+known-noise subtrees, or `--max-depth` to limit how deep the scan
+descends, without changing how remaining findings are judged.
 
 ## Build
 
