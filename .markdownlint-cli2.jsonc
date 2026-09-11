@@ -1,13 +1,14 @@
 {
-  "config": {
-    "MD013": false
-  },
-  "globs": [
-    "**/*.md"
-  ],
-  "ignores": [
-    "build/**",
-    "dist/**",
-    "node_modules/**"
-  ]
+    "config": {
+        "MD013": false
+    },
+    "globs": [
+        "**/*.md"
+    ],
+    "ignores": [
+        "build/**",
+        "dist/**",
+        "node_modules/**",
+        "CLAUDE.md"
+    ]
 }
