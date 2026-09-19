@@ -6,7 +6,7 @@
 
 言語非依存の共通契約はCodexのグローバル`AGENTS.md`、C/C++共通規約は`cpp-conventions` Skillを基準とし、ここでは再掲しない。
 
-Dotfiles Doctor固有の指示、`docs/CODING_CONVENTIONS.md`、実際に使用されるbuild / tool設定が共通規約と矛盾する場合は、より具体的なrepository側の契約を優先する。
+Dotfiles Doctor固有の指示、`docs/coding-conventions.md`、実際に使用されるbuild / tool設定が共通規約と矛盾する場合は、より具体的なrepository側の契約を優先する。
 
 ## Repository概要と優先事項
 
@@ -29,7 +29,7 @@ GNU Stow専用toolではなく、dotfiles repositoryを診断するtoolとして
 
 * `README.md`: project概要、現状、利用者向け情報
 * `README.ja.md`: READMEの日本語版
-* `docs/CODING_CONVENTIONS.md`: Dotfiles Doctor固有のC++追加・上書き規約
+* `docs/coding-conventions.md`: Dotfiles Doctor固有のC++追加・上書き規約
 * `LICENSE`: GPL-3.0-or-later license
 
 設計文書が追加された場合は、その責務に対応する正式文書をSSOTとする。
@@ -50,7 +50,7 @@ GNU Stow専用toolではなく、dotfiles repositoryを診断するtoolとして
 
 ## Skill routing
 
-* C/C++の生成・編集・レビューでは`cpp-conventions`を使い、続けて`docs/CODING_CONVENTIONS.md`を必ず読む。
+* C/C++の生成・編集・レビューでは`cpp-conventions`を使い、続けて`docs/coding-conventions.md`を必ず読む。
 * read-onlyの責務監査、unused判定、docs整合確認では`audit`を使う。
 * 非自明な変更後のbuild / test / CLI確認では`verify`を使う。
 * commit前の差分整理では`commit-prep`、GitHub操作では`github`を使う。

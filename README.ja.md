@@ -276,7 +276,7 @@ Dotfiles DoctorはAURへは公開していません。
 ## ドキュメント
 
 - `man dotdoc` — manual page。binaryと一緒にinstallされます
-- [docs/CODING_CONVENTIONS.md](docs/CODING_CONVENTIONS.md) — プロジェクト固有のC++コーディング規約
+- [docs/coding-conventions.md](docs/coding-conventions.md) — プロジェクト固有のC++コーディング規約
 - [GitHub issues](https://github.com/seekerkrt/dotfiles-doctor/issues) — roadmapと今後の診断機能
 
 ## License
