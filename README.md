@@ -282,7 +282,7 @@ Dotfiles Doctor is not published on the AUR.
 ## Documentation
 
 - `man dotdoc` — manual page, installed together with the binary
-- [docs/CODING_CONVENTIONS.md](docs/CODING_CONVENTIONS.md) — project-specific C++ conventions
+- [docs/coding-conventions.md](docs/coding-conventions.md) — project-specific C++ conventions
 - [GitHub issues](https://github.com/seekerkrt/dotfiles-doctor/issues) — roadmap and planned diagnostics
 
 ## License
